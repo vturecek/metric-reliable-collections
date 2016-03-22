@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="LoadMetricsType" ApplicationTypeVersion="1.0.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+   <Parameters />
+   <ServiceManifestImport>
+      <ServiceManifestRef ServiceManifestName="LoadGenServicePkg" ServiceManifestVersion="1.0.0" />
+      <ConfigOverrides />
+   </ServiceManifestImport>
+   <DefaultServices>
+      <Service Name="LoadGenService">
+         <StatefulService ServiceTypeName="LoadGenServiceType" TargetReplicaSetSize="3" MinReplicaSetSize="2">
+            <UniformInt64Partition PartitionCount="1" LowKey="-10" HighKey="10" />
+         </StatefulService>
+      </Service>
+   </DefaultServices>
+</ApplicationManifest>
