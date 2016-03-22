@@ -135,7 +135,7 @@ namespace MetricReliableCollections
             ConditionalValue<IReliableState> result = await this.TryCreateOrGetMetricReliableCollectionAsync(tx, typeof(T), name, timeout);
 
             return result.HasValue
-                ? (T) result.Value
+                ? (T)result.Value
                 : await this.stateManagerReplica.GetOrAddAsync<T>(tx, name, timeout);
         }
 
@@ -198,7 +198,7 @@ namespace MetricReliableCollections
                 await tx.CommitAsync();
 
                 return result.HasValue
-                    ? new ConditionalValue<T>(true, (T) result.Value)
+                    ? new ConditionalValue<T>(true, (T)result.Value)
                     : await this.stateManagerReplica.TryGetAsync<T>(name);
             }
         }
@@ -253,8 +253,11 @@ namespace MetricReliableCollections
 
         private async Task UpdateMetricCollectionTypes(ITransaction tx, Type type, Uri name, TimeSpan timeout)
         {
+            // Getting this dictionary is not part of the given transaction (tx).
+            // Using the given transaction doesn't work because the dictionary won't be created
+            //   until the transaction used to create it is committed.
             IReliableDictionary<string, string> metricDictionaryTypes =
-                await this.stateManagerReplica.GetOrAddAsync<IReliableDictionary<string, string>>(tx, new Uri(MetricCollectionTypeDictionaryName), timeout);
+                await this.stateManagerReplica.GetOrAddAsync<IReliableDictionary<string, string>>(new Uri(MetricCollectionTypeDictionaryName), timeout);
 
             if (!(await metricDictionaryTypes.ContainsKeyAsync(tx, name.ToString(), LockMode.Update)))
             {
