@@ -15,40 +15,34 @@ namespace MetricReliableCollections
     internal static class MetricReliableDictionaryActivator
     {
         internal static IReliableState CreateFromReliableDictionaryType(
-            Type type, IReliableDictionary<BinaryValue, BinaryValue> innerStore, IReliableDictionary<string, long> metricsStore, BinaryValueConverter converter)
+            Type type, IReliableDictionary<BinaryValue, BinaryValue> innerStore, IMetricSink metricSink, BinaryValueConverter converter)
         {
             return (IReliableState) Activator.CreateInstance(
                 typeof(MetricReliableDictionary<,>).MakeGenericType(
                     type.GetGenericArguments()),
                 innerStore,
-                metricsStore,
+                metricSink,
                 converter);
         }
     }
 
-    internal class MetricReliableDictionary<TKey, TValue> : IReliableDictionary<TKey, TValue>, IMetricReliableCollection
+    internal class MetricReliableDictionary<TKey, TValue> : IReliableDictionary<TKey, TValue>
         where TKey : IComparable<TKey>, IEquatable<TKey>
     {
         private readonly IReliableDictionary<BinaryValue, BinaryValue> store;
-
-        private readonly IReliableDictionary<string, long> metrics;
-
+        
         private readonly BinaryValueConverter converter;
 
+        private readonly IMetricSink metricSink;
 
         public MetricReliableDictionary(
-            IReliableDictionary<BinaryValue, BinaryValue> store, IReliableDictionary<string, long> metricsStore, BinaryValueConverter converter)
+            IReliableDictionary<BinaryValue, BinaryValue> store, IMetricSink metricSink, BinaryValueConverter converter)
         {
             this.store = store;
-            this.metrics = metricsStore;
+            this.metricSink = metricSink;
             this.converter = converter;
         }
-
-        public Task<IEnumerable<KeyValuePair<string, int>>> GetMetricsAsync(CancellationToken token)
-        {
-            throw new NotImplementedException();
-        }
-
+        
         public Uri Name
         {
             get { return this.store.Name; }

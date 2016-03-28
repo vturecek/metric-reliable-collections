@@ -91,6 +91,22 @@ namespace MetricReliableCollections.Tests
         }
 
         [TestMethod]
+        public async Task EnumerateEmpty()
+        {
+            MetricReliableStateManager target = new MetricReliableStateManager(
+                this.GetContext(),
+                new JsonReliableStateSerializerResolver(),
+                new MockReliableStateManager());
+            
+            IAsyncEnumerator<IReliableState> enumerator = target.GetAsyncEnumerator();
+
+            bool next = await enumerator.MoveNextAsync(CancellationToken.None);
+            
+            Assert.IsFalse(next);
+            Assert.IsNull(enumerator.Current);
+        }
+
+        [TestMethod]
         public async Task EnumerateSingleItem()
         {
             Uri name = new Uri("test://dictionary");

@@ -74,6 +74,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="AdditiveMetricSinkTests.cs" />
     <Compile Include="BinaryValueTests.cs" />
     <Compile Include="MetricReliableStateManagerTests.cs" />
     <Compile Include="Mocks\MockAsyncEnumerable.cs" />
