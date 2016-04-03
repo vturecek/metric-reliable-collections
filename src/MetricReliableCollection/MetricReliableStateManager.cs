@@ -366,10 +366,23 @@ namespace MetricReliableCollections
                 this.stateManagerReplicaEnumerator.Dispose();
             }
 
+            /// <summary>
+            /// Advances the enumerator to the next collection in the state manager and sets the Current property to it.
+            /// </summary>
+            /// <remarks>
+            /// This works for both Metric collections and non-Metric collections even though Metric collection instances are not actually saved.
+            /// This works by looking for type metadata associated with each collection name. 
+            /// If type metadata is found, the type information is used to create an instance of the Metric collection,
+            /// otherwise the collection is assumed to be a non-Metric collection and is returned as-is.
+            /// The enumerator also skips over the collections that are used to store this metadata.
+            /// </remarks>
+            /// <param name="cancellationToken"></param>
+            /// <returns></returns>
             public async Task<bool> MoveNextAsync(CancellationToken cancellationToken)
             {
                 while (await this.stateManagerReplicaEnumerator.MoveNextAsync(cancellationToken))
                 {
+                    // skip over collections used internally to store metadata.
                     if (String.Equals(this.stateManagerReplicaEnumerator.Current.Name.Scheme, MetricMetadataStoreScheme))
                     {
                         continue;
