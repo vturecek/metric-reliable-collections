@@ -8,6 +8,7 @@ namespace MetricReliableCollections
     using System;
     using System.Collections.Generic;
     using System.Fabric;
+    using System.Threading;
     using System.Threading.Tasks;
 
     internal interface IMetricSink
@@ -19,7 +20,7 @@ namespace MetricReliableCollections
         /// <param name="collectionName"></param>
         /// <param name="metrics"></param>
         /// <returns></returns>
-        Task ReportLoadAsync(ITransaction tx, Uri collectionName, IEnumerable<LoadMetric> metrics);
+        Task ReportLoadAsync(ITransaction tx, Uri collectionName, IEnumerable<LoadMetric> metrics, TimeSpan timeout, CancellationToken token);
 
         /// <summary>
         /// Adds the values of the given load metrics to the previous values of the same name,
@@ -29,6 +30,6 @@ namespace MetricReliableCollections
         /// <param name="collectionName"></param>
         /// <param name="metrics"></param>
         /// <returns></returns>
-        Task AddLoadAsync(ITransaction tx, Uri collectionName, IEnumerable<LoadMetric> metrics);
+        Task AddLoadAsync(ITransaction tx, Uri collectionName, IEnumerable<LoadMetric> metrics, TimeSpan timeout, CancellationToken token);
     }
 }

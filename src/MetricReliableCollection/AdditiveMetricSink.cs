@@ -52,18 +52,18 @@ namespace MetricReliableCollections
             return totals.Select(x => new LoadMetric(x.Key, x.Value));
         }
 
-        public async Task ReportLoadAsync(ITransaction tx, Uri collectionName, IEnumerable<LoadMetric> metrics)
+        public async Task ReportLoadAsync(ITransaction tx, Uri collectionName, IEnumerable<LoadMetric> metrics, TimeSpan timeout, CancellationToken token)
         {
             IReliableDictionary<string, List<LoadMetric>> metricDictionary =
-                await this.stateManager.GetOrAddAsync<IReliableDictionary<string, List<LoadMetric>>>(this.metricStoreName);
+                await this.stateManager.GetOrAddAsync<IReliableDictionary<string, List<LoadMetric>>>(this.metricStoreName, timeout);
 
-            await metricDictionary.SetAsync(tx, collectionName.ToString(), metrics.ToList());
+            await metricDictionary.SetAsync(tx, collectionName.ToString(), metrics.ToList(), timeout, token);
         }
 
-        public async Task AddLoadAsync(ITransaction tx, Uri collectionName, IEnumerable<LoadMetric> metrics)
+        public async Task AddLoadAsync(ITransaction tx, Uri collectionName, IEnumerable<LoadMetric> metrics, TimeSpan timeout, CancellationToken token)
         {
             IReliableDictionary<string, List<LoadMetric>> metricDictionary =
-                await this.stateManager.GetOrAddAsync<IReliableDictionary<string, List<LoadMetric>>>(this.metricStoreName);
+                await this.stateManager.GetOrAddAsync<IReliableDictionary<string, List<LoadMetric>>>(this.metricStoreName, timeout);
 
             await metricDictionary.AddOrUpdateAsync(tx, collectionName.ToString(), metrics.ToList(), (key, value) =>
             {
@@ -74,16 +74,18 @@ namespace MetricReliableCollections
 
                     if (current == null)
                     {
-                        currentMetrics.Add(newMetric);
+                        currentMetrics.Add(new LoadMetric(newMetric.Name, Math.Max(0, newMetric.Value)));
                     }
                     else
                     {
-                        currentMetrics.Add(new LoadMetric(current.Name, current.Value + newMetric.Value));
+                        currentMetrics.Add(new LoadMetric(current.Name, Math.Max(0, current.Value + newMetric.Value)));
                     }
                 }
 
                 return currentMetrics;
-            });
+            },
+            timeout,
+            token);
         }
     }
 }
