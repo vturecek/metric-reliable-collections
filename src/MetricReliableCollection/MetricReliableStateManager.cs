@@ -12,7 +12,7 @@ namespace MetricReliableCollections
     using Microsoft.ServiceFabric.Data;
     using Microsoft.ServiceFabric.Data.Collections;
     using Microsoft.ServiceFabric.Data.Notifications;
-
+    using System.Collections.Generic;
     public class MetricReliableStateManager : IReliableStateManagerReplica
     {
         /// <summary>
@@ -239,16 +239,30 @@ namespace MetricReliableCollections
             // For state manager:
             //  - primaries and secondaries read from the sink and report load.
 
+            if (newRole == ReplicaRole.Primary || newRole == ReplicaRole.ActiveSecondary)
+            {
+                this.reportTaskCancellation = new CancellationTokenSource();
+                this.reportTask = StartReportingMetrics(this.reportTaskCancellation.Token);
+            }
+            else
+            {
+                this.CancelMetricReporting();
+            }
+
             return this.stateManagerReplica.ChangeRoleAsync(newRole, cancellationToken);
         }
 
-        public async Task CloseAsync(CancellationToken cancellationToken)
+        public Task CloseAsync(CancellationToken cancellationToken)
         {
-            await this.stateManagerReplica.CloseAsync(cancellationToken);
+            this.CancelMetricReporting();
+
+            return this.stateManagerReplica.CloseAsync(cancellationToken);
         }
 
         public void Abort()
         {
+            this.CancelMetricReporting();
+
             this.stateManagerReplica.Abort();
         }
 
@@ -271,6 +285,53 @@ namespace MetricReliableCollections
         public Task RestoreAsync(string backupFolderPath, RestorePolicy restorePolicy, CancellationToken cancellationToken)
         {
             return this.stateManagerReplica.RestoreAsync(backupFolderPath, restorePolicy, cancellationToken);
+        }
+
+        private void CancelMetricReporting()
+        {
+            if (this.reportTaskCancellation != null && !this.reportTaskCancellation.IsCancellationRequested)
+            {
+                try
+                {
+                    this.reportTaskCancellation.Cancel();
+                }
+                finally
+                {
+                    this.reportTaskCancellation.Dispose();
+                }
+            }
+        }
+
+        private Task StartReportingMetrics(CancellationToken token)
+        {
+            return Task.Run(async () =>
+            {
+                while (true)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    try
+                    {
+                        IEnumerable<LoadMetric> metrics = await this.metricSink.SumMetricsAsync(token);
+
+                        if (metrics != null)
+                        {
+                            this.partition.ReportLoad(metrics);
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception e)
+                    {
+                        // trace
+                    }
+
+                    await Task.Delay(DefaultReportInterval, token);
+                }
+            },
+            token);
         }
 
         /// <summary>

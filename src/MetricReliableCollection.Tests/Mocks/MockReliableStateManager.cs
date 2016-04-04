@@ -186,7 +186,7 @@ namespace MetricReliableCollections.Tests.Mocks
 
         public Task<IReplicator> OpenAsync(ReplicaOpenMode openMode, IStatefulServicePartition partition, CancellationToken cancellationToken)
         {
-            return null;
+            return Task.FromResult<IReplicator>(null);
         }
 
         public Task ChangeRoleAsync(ReplicaRole newRole, CancellationToken cancellationToken)

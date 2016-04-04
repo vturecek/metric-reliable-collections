@@ -18,7 +18,7 @@ namespace MetricReliableCollections.Tests
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
-    public class MetricReliableStateManagerTests
+    public class MetricReliableStateManagerUnitTests
     {
         [TestMethod]
         public async Task GetOrAddAsyncResultType()

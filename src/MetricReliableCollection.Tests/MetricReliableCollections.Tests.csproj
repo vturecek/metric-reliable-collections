@@ -76,12 +76,14 @@
   <ItemGroup>
     <Compile Include="AdditiveMetricSinkTests.cs" />
     <Compile Include="BinaryValueTests.cs" />
-    <Compile Include="MetricReliableStateManagerTests.cs" />
+    <Compile Include="MetricReliableStateManagerReportTests.cs" />
+    <Compile Include="MetricReliableStateManagerUnitTests.cs" />
     <Compile Include="Mocks\MockAsyncEnumerable.cs" />
     <Compile Include="Mocks\MockCodePackageActivationContext.cs" />
     <Compile Include="Mocks\MockReliableDictionary.cs" />
     <Compile Include="Mocks\MockReliableQueue.cs" />
     <Compile Include="Mocks\MockReliableStateManager.cs" />
+    <Compile Include="Mocks\MockStatefulServicePartition.cs" />
     <Compile Include="Mocks\MockTransaction.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

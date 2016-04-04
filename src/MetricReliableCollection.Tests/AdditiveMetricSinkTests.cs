@@ -11,6 +11,7 @@ namespace MetricReliableCollections.Tests
     using System.Collections.Generic;
     using System.Fabric;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
 
     [TestClass]
@@ -40,7 +41,7 @@ namespace MetricReliableCollections.Tests
                 await tx.CommitAsync();
             }
 
-            IEnumerable<LoadMetric> result = await target.SumMetricsAsync();
+            IEnumerable<LoadMetric> result = await target.SumMetricsAsync(CancellationToken.None);
 
             Assert.AreEqual<int>(1, result.Count(x => x.Name == expectedMetric1 && x.Value == expectedMetric1Value));
             Assert.AreEqual<int>(1, result.Count(x => x.Name == expectedMetric2 && x.Value == expectedMetric2Value));
@@ -83,7 +84,7 @@ namespace MetricReliableCollections.Tests
                 await tx.CommitAsync();
             }
 
-            IEnumerable<LoadMetric> result = await target.SumMetricsAsync();
+            IEnumerable<LoadMetric> result = await target.SumMetricsAsync(CancellationToken.None);
 
             Assert.AreEqual<int>(1, result.Count(x => x.Name == expectedMetric1 && x.Value == expectedMetric1Value));
             Assert.AreEqual<int>(1, result.Count(x => x.Name == expectedMetric2 && x.Value == expectedMetric2Value));
@@ -126,7 +127,7 @@ namespace MetricReliableCollections.Tests
                 await tx.CommitAsync();
             }
 
-            IEnumerable<LoadMetric> result = await target.SumMetricsAsync();
+            IEnumerable<LoadMetric> result = await target.SumMetricsAsync(CancellationToken.None);
 
             Assert.AreEqual<int>(1, result.Count(x => x.Name == expectedMetric1 && x.Value == expectedMetric1Value));
             Assert.AreEqual<int>(1, result.Count(x => x.Name == expectedMetric2 && x.Value == expectedMetric2Value));
@@ -166,7 +167,7 @@ namespace MetricReliableCollections.Tests
                 await tx.CommitAsync();
             }
 
-            IEnumerable<LoadMetric> result = await target.SumMetricsAsync();
+            IEnumerable<LoadMetric> result = await target.SumMetricsAsync(CancellationToken.None);
 
             Assert.AreEqual<int>(1, result.Count(x => x.Name == expectedMetric1 && x.Value == expectedMetricValue1 + expectedMetricValue2));
         }
@@ -209,7 +210,7 @@ namespace MetricReliableCollections.Tests
                 await tx.CommitAsync();
             }
 
-            IEnumerable<LoadMetric> result = await target.SumMetricsAsync();
+            IEnumerable<LoadMetric> result = await target.SumMetricsAsync(CancellationToken.None);
 
             Assert.AreEqual<int>(1, result.Count(x => x.Name == expectedMetric1 && x.Value == expectedMetric1Value1 + expectedMetric1Value2));
             Assert.AreEqual<int>(1, result.Count(x => x.Name == expectedMetric2 && x.Value == expectedMetric2Value1 + expectedMetric2Value2));
@@ -267,7 +268,7 @@ namespace MetricReliableCollections.Tests
                 await tx.CommitAsync();
             }
 
-            IEnumerable<LoadMetric> result = await target.SumMetricsAsync();
+            IEnumerable<LoadMetric> result = await target.SumMetricsAsync(CancellationToken.None);
 
             Assert.AreEqual<int>(1, result.Count(x => x.Name == expectedMetric1 && x.Value == expectedMetric1Value1 + expectedMetric1Value2));
             Assert.AreEqual<int>(1, result.Count(x => x.Name == expectedMetric2 && x.Value == expectedMetric2Value1 + expectedMetric2Value2));

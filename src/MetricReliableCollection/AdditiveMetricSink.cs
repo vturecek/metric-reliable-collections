@@ -24,7 +24,7 @@ namespace MetricReliableCollections
             this.metricStoreName = metricStoreName;
         }
 
-        internal async Task<IEnumerable<LoadMetric>> SumMetricsAsync()
+        internal async Task<IEnumerable<LoadMetric>> SumMetricsAsync(CancellationToken token)
         {
             IReliableDictionary<string, List<LoadMetric>> metricDictionary =
                 await this.stateManager.GetOrAddAsync<IReliableDictionary<string, List<LoadMetric>>>(this.metricStoreName);
@@ -33,7 +33,7 @@ namespace MetricReliableCollections
 
             using (ITransaction tx = this.stateManager.CreateTransaction())
             {
-                await metricDictionary.ForeachAsync(tx, CancellationToken.None, item =>
+                await metricDictionary.ForeachAsync(tx, token, item =>
                 {
                     foreach (LoadMetric metric in item.Value)
                     {
