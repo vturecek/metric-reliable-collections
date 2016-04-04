@@ -13,6 +13,7 @@ namespace MetricReliableCollections
     using Microsoft.ServiceFabric.Data.Collections;
     using Microsoft.ServiceFabric.Data.Notifications;
     using System.Collections.Generic;
+    using Extensions;
     public class MetricReliableStateManager : IReliableStateManagerReplica
     {
         /// <summary>
@@ -35,6 +36,8 @@ namespace MetricReliableCollections
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(4);
 
         private readonly ConcurrentDictionary<Uri, object> collectionCache = new ConcurrentDictionary<Uri, object>();
+
+        private IReliableDictionary<string, string> collectionTypeNamesInstance;
 
         private readonly IReliableStateManagerReplica stateManagerReplica;
 
@@ -232,7 +235,9 @@ namespace MetricReliableCollections
             // which should be available through the metric sink.
             // Collections will only be able to write metrics to the sink on primary, 
             // but that's ok because the sink uses a replicated data store to make metrics available on secondary replicas.
-           
+            // Metric collections are created on-demand when requested from the state manager, 
+            // which means they do not always exist on secondaries.
+
             // For collections:
             //  - primaries report load to the sink which gets replicated to secondaries.
 
@@ -358,7 +363,7 @@ namespace MetricReliableCollections
                 // the caller must commit the transaction, or else bad things will happen.
             }
         }
-        
+
         private async Task<ConditionalValue<IReliableState>> TryCreateOrGetMetricReliableCollectionAsync(ITransaction tx, Type type, Uri name, TimeSpan timeout)
         {
             if (type.GetGenericTypeDefinition() == typeof(IReliableDictionary<,>))
@@ -367,7 +372,7 @@ namespace MetricReliableCollections
 
                 IReliableDictionary<BinaryValue, BinaryValue> innerStore =
                     await this.stateManagerReplica.GetOrAddAsync<IReliableDictionary<BinaryValue, BinaryValue>>(tx, name, timeout);
-                
+
                 return new ConditionalValue<IReliableState>(
                     true,
                     MetricReliableDictionaryActivator.CreateFromReliableDictionaryType(
@@ -390,7 +395,7 @@ namespace MetricReliableCollections
                 if (tryGetResult.HasValue)
                 {
                     await this.UpdateMetricCollectionTypesAsync(tx, type, name, DefaultTimeout);
-                    
+
                     ConditionalValue<IReliableState> result = new ConditionalValue<IReliableState>(
                         true,
                         MetricReliableDictionaryActivator.CreateFromReliableDictionaryType(
@@ -406,13 +411,29 @@ namespace MetricReliableCollections
             return new ConditionalValue<IReliableState>(false, null);
         }
 
+        private async Task<IReliableDictionary<string, string>> GetTypeNameDictionaryAsync()
+        {
+            if (this.collectionTypeNamesInstance == null)
+            {
+                this.collectionTypeNamesInstance =
+                    await
+                        this.stateManagerReplica.GetOrAddAsync<IReliableDictionary<string, string>>(
+                            new Uri(MetricCollectionTypeDictionaryName));
+            }
+
+            return this.collectionTypeNamesInstance;
+        }
+
+
+        /// <summary>
+        /// Async enumerator wrapper.
+        /// </summary>
         private class MetricReliableStateManagerAsyncEnumerator : IAsyncEnumerator<IReliableState>
         {
             private readonly MetricReliableStateManager metricReliableStateManager;
 
             private readonly IAsyncEnumerator<IReliableState> stateManagerReplicaEnumerator;
 
-            private IReliableDictionary<string, string> collectionTypeNamesInstance;
 
             public MetricReliableStateManagerAsyncEnumerator(MetricReliableStateManager stateManager)
             {
@@ -451,7 +472,7 @@ namespace MetricReliableCollections
 
                     using (ITransaction tx = this.metricReliableStateManager.CreateTransaction())
                     {
-                        IReliableDictionary<string, string> collectionTypeNames = await this.GetTypeNameDictionaryAsync();
+                        IReliableDictionary<string, string> collectionTypeNames = await this.metricReliableStateManager.GetTypeNameDictionaryAsync();
 
                         ConditionalValue<string> typeNameResult =
                             await collectionTypeNames.TryGetValueAsync(tx, this.stateManagerReplicaEnumerator.Current.Name.ToString());
@@ -483,19 +504,7 @@ namespace MetricReliableCollections
             {
                 this.stateManagerReplicaEnumerator.Reset();
             }
-
-            private async Task<IReliableDictionary<string, string>> GetTypeNameDictionaryAsync()
-            {
-                if (this.collectionTypeNamesInstance == null)
-                {
-                    this.collectionTypeNamesInstance =
-                        await
-                            this.metricReliableStateManager.stateManagerReplica.GetOrAddAsync<IReliableDictionary<string, string>>(
-                                new Uri(MetricCollectionTypeDictionaryName));
-                }
-
-                return this.collectionTypeNamesInstance;
-            }
         }
+
     }
 }
