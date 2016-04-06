@@ -67,11 +67,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AdditiveMetricSink.cs" />
     <Compile Include="Extensions\IAsyncEnumerableExtensions.cs" />
     <Compile Include="Extensions\ReliableDictionaryAsyncEnumerableExtensions.cs" />
     <Compile Include="IMetricReliableCollection.cs" />
-    <Compile Include="IMetricSink.cs" />
     <Compile Include="IReliableStateSerializer.cs" />
     <Compile Include="IReliableStateSerializerResolver.cs" />
     <Compile Include="MetricAggregator.cs" />
