@@ -56,7 +56,7 @@ namespace MetricReliableCollections.Tests
 
             // this may yield false negatives because we're at the mercy of the task scheduler
             // to actually execute the reporting task in a timely manner, which depends on external factors.
-            reset.WaitOne(TimeSpan.FromSeconds(30));
+            reset.WaitOne(TimeSpan.FromSeconds(10));
 
             return actual;
         }

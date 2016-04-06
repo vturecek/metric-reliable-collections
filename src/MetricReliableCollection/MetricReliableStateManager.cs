@@ -312,51 +312,24 @@ namespace MetricReliableCollections
             }
         }
 
-        private Task StartReportingMetricsAsync(CancellationToken token)
+        private Task StartReportingMetricsAsync(CancellationToken cancellationToken)
         {
             return Task.Run(
                 async () =>
                 {
+                    MetricAggregator aggregator = new MetricAggregator();
+
                     while (true)
                     {
-                        token.ThrowIfCancellationRequested();
+                        cancellationToken.ThrowIfCancellationRequested();
 
                         try
                         {
-                            Dictionary<string, int> totals = new Dictionary<string, int>();
+                            IEnumerable<LoadMetric> loadMetrics = await aggregator.Aggregate(this, cancellationToken);
 
-                            await this.ForeachAsync(
-                                token,
-                                async item =>
-                                {
-                                    token.ThrowIfCancellationRequested();
-
-                                    IMetricReliableCollection metricCollection = item as IMetricReliableCollection;
-
-                                    if (metricCollection != null)
-                                    {
-                                        using (ITransaction tx = this.CreateTransaction())
-                                        {
-                                            IEnumerable<LoadMetric> metrics = await metricCollection.GetLoadMetricsAsync(tx, token);
-
-                                            foreach (LoadMetric metric in metrics)
-                                            {
-                                                if (totals.ContainsKey(metric.Name))
-                                                {
-                                                    totals[metric.Name] += metric.Value;
-                                                }
-                                                else
-                                                {
-                                                    totals[metric.Name] = metric.Value;
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-
-                            if (totals.Count > 0)
+                            if (loadMetrics.Any())
                             {
-                                this.partition.ReportLoad(totals.Select(x => new LoadMetric(x.Key, x.Value/1024)));
+                                this.partition.ReportLoad(loadMetrics);
                             }
                         }
                         catch (OperationCanceledException)
@@ -368,10 +341,10 @@ namespace MetricReliableCollections
                             // trace
                         }
 
-                        await Task.Delay(DefaultReportInterval, token);
+                        await Task.Delay(DefaultReportInterval, cancellationToken);
                     }
                 },
-                token);
+                cancellationToken);
         }
 
         /// <summary>

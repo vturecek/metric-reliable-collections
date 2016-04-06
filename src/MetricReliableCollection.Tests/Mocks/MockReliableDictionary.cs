@@ -7,6 +7,7 @@ namespace MetricReliableCollections.Tests.Mocks
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
+    using System.Fabric;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
@@ -14,7 +15,7 @@ namespace MetricReliableCollections.Tests.Mocks
     using Microsoft.ServiceFabric.Data.Collections;
     using Microsoft.ServiceFabric.Data.Notifications;
 
-    public class MockReliableDictionary<TKey, TValue> : IReliableDictionary<TKey, TValue>
+    public class MockReliableDictionary<TKey, TValue> : IReliableDictionary<TKey, TValue>, IMetricReliableCollection
         where TKey : IComparable<TKey>, IEquatable<TKey>
     {
         private ConcurrentDictionary<TKey, TValue> dictionary = new ConcurrentDictionary<TKey, TValue>();
@@ -242,6 +243,13 @@ namespace MetricReliableCollections.Tests.Mocks
         public Task<long> GetCountAsync()
         {
             return Task.FromResult((long) this.dictionary.Count);
+        }
+
+        public Func<IEnumerable<LoadMetric>> OnGetLoadMetrics { get; set; }
+
+        public Task<IEnumerable<LoadMetric>> GetLoadMetricsAsync(ITransaction tx, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(this.OnGetLoadMetrics());
         }
     }
 }

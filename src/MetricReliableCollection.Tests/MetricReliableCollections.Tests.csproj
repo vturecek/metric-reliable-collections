@@ -75,6 +75,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="AdditiveMetricSinkTests.cs" />
+    <Compile Include="MetricAggregatorTests.cs" />
     <Compile Include="BinaryValueConverterTest.cs" />
     <Compile Include="JsonReliableStateSerializerTests.cs" />
     <Compile Include="BinaryValueStateSerializerTests.cs" />
