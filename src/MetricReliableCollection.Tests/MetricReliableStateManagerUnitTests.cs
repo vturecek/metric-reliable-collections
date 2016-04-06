@@ -97,11 +97,11 @@ namespace MetricReliableCollections.Tests
                 this.GetContext(),
                 new JsonReliableStateSerializerResolver(),
                 new MockReliableStateManager());
-            
+
             IAsyncEnumerator<IReliableState> enumerator = target.GetAsyncEnumerator();
 
             bool next = await enumerator.MoveNextAsync(CancellationToken.None);
-            
+
             Assert.IsFalse(next);
             Assert.IsNull(enumerator.Current);
         }

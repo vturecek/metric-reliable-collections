@@ -20,7 +20,6 @@ namespace LoadGenService
         {
             try
             {
-
                 //To use regular Reliable Collection, use this registration instead:
 
                 //ServiceRuntime.RegisterServiceAsync(

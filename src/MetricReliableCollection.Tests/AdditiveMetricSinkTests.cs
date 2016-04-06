@@ -4,15 +4,15 @@
 
 namespace MetricReliableCollections.Tests
 {
-    using MetricReliableCollections.Tests.Mocks;
-    using Microsoft.ServiceFabric.Data;
-    using Microsoft.VisualStudio.TestTools.UnitTesting;
     using System;
     using System.Collections.Generic;
     using System.Fabric;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using MetricReliableCollections.Tests.Mocks;
+    using Microsoft.ServiceFabric.Data;
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
     public class AdditiveMetricSinkTests
@@ -32,11 +32,14 @@ namespace MetricReliableCollections.Tests
 
             using (ITransaction tx = stateManager.CreateTransaction())
             {
-                await target.ReportLoadAsync(tx, collectionName, new[]
-                {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value)
-                });
+                await target.ReportLoadAsync(
+                    tx,
+                    collectionName,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric1, expectedMetric1Value),
+                        new LoadMetric(expectedMetric2, expectedMetric2Value)
+                    });
 
                 await tx.CommitAsync();
             }
@@ -64,22 +67,28 @@ namespace MetricReliableCollections.Tests
 
             using (ITransaction tx = stateManager.CreateTransaction())
             {
-                await target.ReportLoadAsync(tx, collection1Name, new[]
-                {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value / 2),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value / 2)
-                });
+                await target.ReportLoadAsync(
+                    tx,
+                    collection1Name,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric1, expectedMetric1Value/2),
+                        new LoadMetric(expectedMetric2, expectedMetric2Value/2)
+                    });
 
                 await tx.CommitAsync();
             }
 
             using (ITransaction tx = stateManager.CreateTransaction())
             {
-                await target.ReportLoadAsync(tx, collection2Name, new[]
-                {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value / 2),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value / 2)
-                });
+                await target.ReportLoadAsync(
+                    tx,
+                    collection2Name,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric1, expectedMetric1Value/2),
+                        new LoadMetric(expectedMetric2, expectedMetric2Value/2)
+                    });
 
                 await tx.CommitAsync();
             }
@@ -109,20 +118,26 @@ namespace MetricReliableCollections.Tests
 
             using (ITransaction tx = stateManager.CreateTransaction())
             {
-                await target.ReportLoadAsync(tx, collection1Name, new[]
-                {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value)
-                });
+                await target.ReportLoadAsync(
+                    tx,
+                    collection1Name,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric1, expectedMetric1Value),
+                        new LoadMetric(expectedMetric2, expectedMetric2Value)
+                    });
 
                 await tx.CommitAsync();
             }
             using (ITransaction tx = stateManager.CreateTransaction())
             {
-                await target.ReportLoadAsync(tx, collection2Name, new[]
-                {
-                    new LoadMetric(expectedMetric3, expectedMetric3Value)
-                });
+                await target.ReportLoadAsync(
+                    tx,
+                    collection2Name,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric3, expectedMetric3Value)
+                    });
 
                 await tx.CommitAsync();
             }
@@ -149,20 +164,26 @@ namespace MetricReliableCollections.Tests
 
             using (ITransaction tx = stateManager.CreateTransaction())
             {
-                await target.AddLoadAsync(tx, collectionName, new[]
-                {
-                    new LoadMetric(expectedMetric1, expectedMetricValue1)
-                });
+                await target.AddLoadAsync(
+                    tx,
+                    collectionName,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric1, expectedMetricValue1)
+                    });
 
                 await tx.CommitAsync();
             }
 
             using (ITransaction tx = stateManager.CreateTransaction())
             {
-                await target.AddLoadAsync(tx, collectionName, new[]
-                {
-                    new LoadMetric(expectedMetric1, expectedMetricValue2)
-                });
+                await target.AddLoadAsync(
+                    tx,
+                    collectionName,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric1, expectedMetricValue2)
+                    });
 
                 await tx.CommitAsync();
             }
@@ -190,22 +211,28 @@ namespace MetricReliableCollections.Tests
 
             using (ITransaction tx = stateManager.CreateTransaction())
             {
-                await target.AddLoadAsync(tx, collectionName, new[]
-                {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value1),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value1)
-                });
+                await target.AddLoadAsync(
+                    tx,
+                    collectionName,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric1, expectedMetric1Value1),
+                        new LoadMetric(expectedMetric2, expectedMetric2Value1)
+                    });
 
                 await tx.CommitAsync();
             }
 
             using (ITransaction tx = stateManager.CreateTransaction())
             {
-                await target.AddLoadAsync(tx, collectionName, new[]
-                {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value2),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value2)
-                });
+                await target.AddLoadAsync(
+                    tx,
+                    collectionName,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric1, expectedMetric1Value2),
+                        new LoadMetric(expectedMetric2, expectedMetric2Value2)
+                    });
 
                 await tx.CommitAsync();
             }
@@ -236,34 +263,46 @@ namespace MetricReliableCollections.Tests
 
             using (ITransaction tx = stateManager.CreateTransaction())
             {
-                await target.AddLoadAsync(tx, collection1Name, new[]
-                {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value1 / 2),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value1 / 2)
-                });
+                await target.AddLoadAsync(
+                    tx,
+                    collection1Name,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric1, expectedMetric1Value1/2),
+                        new LoadMetric(expectedMetric2, expectedMetric2Value1/2)
+                    });
 
-                await target.AddLoadAsync(tx, collection1Name, new[]
-                {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value2 / 2),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value2 / 2)
-                });
+                await target.AddLoadAsync(
+                    tx,
+                    collection1Name,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric1, expectedMetric1Value2/2),
+                        new LoadMetric(expectedMetric2, expectedMetric2Value2/2)
+                    });
 
                 await tx.CommitAsync();
             }
 
             using (ITransaction tx = stateManager.CreateTransaction())
             {
-                await target.AddLoadAsync(tx, collection2Name, new[]
-                {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value1 / 2),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value1 / 2)
-                });
+                await target.AddLoadAsync(
+                    tx,
+                    collection2Name,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric1, expectedMetric1Value1/2),
+                        new LoadMetric(expectedMetric2, expectedMetric2Value1/2)
+                    });
 
-                await target.AddLoadAsync(tx, collection2Name, new[]
-                {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value2 / 2),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value2 / 2)
-                });
+                await target.AddLoadAsync(
+                    tx,
+                    collection2Name,
+                    new[]
+                    {
+                        new LoadMetric(expectedMetric1, expectedMetric1Value2/2),
+                        new LoadMetric(expectedMetric2, expectedMetric2Value2/2)
+                    });
 
                 await tx.CommitAsync();
             }

@@ -4,11 +4,11 @@
 
 namespace MetricReliableCollections
 {
-    using Microsoft.ServiceFabric.Data;
     using System;
     using System.Collections.Generic;
     using System.Fabric;
     using System.Threading.Tasks;
+    using Microsoft.ServiceFabric.Data;
 
     internal interface IMetricSink
     {

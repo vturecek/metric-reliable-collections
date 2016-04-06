@@ -6,8 +6,10 @@ namespace MetricReliableCollections
 {
     using System;
     using System.Collections.Generic;
+    using System.Fabric;
     using System.Threading;
     using System.Threading.Tasks;
+    using MetricReliableCollections.Extensions;
     using Microsoft.ServiceFabric.Data;
     using Microsoft.ServiceFabric.Data.Collections;
     using Microsoft.ServiceFabric.Data.Notifications;
@@ -15,34 +17,44 @@ namespace MetricReliableCollections
     internal static class MetricReliableDictionaryActivator
     {
         internal static IReliableState CreateFromReliableDictionaryType(
-            Type type, IReliableDictionary<BinaryValue, BinaryValue> innerStore, IMetricSink metricSink, BinaryValueConverter converter)
+            Type type, IReliableDictionary<BinaryValue, BinaryValue> innerStore, BinaryValueConverter converter)
         {
             return (IReliableState) Activator.CreateInstance(
                 typeof(MetricReliableDictionary<,>).MakeGenericType(
                     type.GetGenericArguments()),
                 innerStore,
-                metricSink,
                 converter);
         }
     }
 
-    internal class MetricReliableDictionary<TKey, TValue> : IReliableDictionary<TKey, TValue>
+    internal class MetricReliableDictionary<TKey, TValue> : IReliableDictionary<TKey, TValue>, IMetricReliableCollection
         where TKey : IComparable<TKey>, IEquatable<TKey>
     {
         private readonly IReliableDictionary<BinaryValue, BinaryValue> store;
-        
+
         private readonly BinaryValueConverter converter;
 
-        private readonly IMetricSink metricSink;
 
         public MetricReliableDictionary(
-            IReliableDictionary<BinaryValue, BinaryValue> store, IMetricSink metricSink, BinaryValueConverter converter)
+            IReliableDictionary<BinaryValue, BinaryValue> store, BinaryValueConverter converter)
         {
             this.store = store;
-            this.metricSink = metricSink;
             this.converter = converter;
         }
-        
+
+        public async Task<IEnumerable<LoadMetric>> GetLoadMetricsAsync(ITransaction tx, CancellationToken cancellationToken)
+        {
+            int total = 0;
+
+            await this.store.ForeachAsync(tx, cancellationToken, item => { total += item.Key.Buffer.Length + item.Value.Buffer.Length; });
+
+            return new[]
+            {
+                new LoadMetric(MetricReliableStateManager.MemoryMetricName, total),
+                new LoadMetric(MetricReliableStateManager.DiskMetricName, total)
+            };
+        }
+
         public Uri Name
         {
             get { return this.store.Name; }

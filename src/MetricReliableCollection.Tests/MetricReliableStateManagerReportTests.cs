@@ -4,16 +4,13 @@
 
 namespace MetricReliableCollections.Tests
 {
-    using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using Mocks;
-    using ReliableStateSerializers;
     using System;
-    using System.Collections.Generic;
     using System.Fabric;
-    using System.Linq;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+    using MetricReliableCollections.ReliableStateSerializers;
+    using MetricReliableCollections.Tests.Mocks;
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
     public class MetricReliableStateManagerReportTests

@@ -6,16 +6,22 @@ namespace MetricReliableCollections
 {
     using System;
     using System.Collections.Concurrent;
+    using System.Collections.Generic;
     using System.Fabric;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using MetricReliableCollections.Extensions;
     using Microsoft.ServiceFabric.Data;
     using Microsoft.ServiceFabric.Data.Collections;
     using Microsoft.ServiceFabric.Data.Notifications;
-    using System.Collections.Generic;
-    using Extensions;
+
     public class MetricReliableStateManager : IReliableStateManagerReplica
     {
+        internal const string MemoryMetricName = "MemoryKB";
+
+        internal const string DiskMetricName = "DiskKB";
+
         /// <summary>
         /// collections that are used for metadata use this URI scheme for their name.
         /// </summary>
@@ -26,30 +32,25 @@ namespace MetricReliableCollections
         /// </summary>
         private const string MetricCollectionTypeDictionaryName = MetricMetadataStoreScheme + "://metriccollectiontypes";
 
-        /// <summary>
-        /// Name of the dictionary that maintains load metric aggregate data.
-        /// </summary>
-        private const string MetricAggregateDictionaryName = MetricMetadataStoreScheme + "://metricaggregates";
-
-        private static readonly TimeSpan DefaultReportInterval = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan DefaultReportInterval = TimeSpan.FromSeconds(30);
 
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(4);
 
         private readonly ConcurrentDictionary<Uri, object> collectionCache = new ConcurrentDictionary<Uri, object>();
 
-        private IReliableDictionary<string, string> collectionTypeNamesInstance;
-
         private readonly IReliableStateManagerReplica stateManagerReplica;
 
         private readonly IReliableStateSerializerResolver serializerResolver;
 
-        private readonly AdditiveMetricSink metricSink;
+        private IReliableDictionary<string, string> collectionTypeNamesInstance;
 
         private IStatefulServicePartition partition;
 
         private CancellationTokenSource reportTaskCancellation;
 
         private Task reportTask;
+
+        private ReplicaRole currentRole = ReplicaRole.Unknown;
 
         public MetricReliableStateManager(StatefulServiceContext context, IReliableStateSerializerResolver serializerResolver)
         {
@@ -60,7 +61,6 @@ namespace MetricReliableCollections
                         Task.FromResult(this.stateManagerReplica.TryAddStateSerializer<BinaryValue>(new BinaryValueStateSerializer()))));
 
             this.serializerResolver = serializerResolver;
-            this.metricSink = new AdditiveMetricSink(this.stateManagerReplica, MetricAggregateDictionaryName);
         }
 
         internal MetricReliableStateManager(
@@ -68,7 +68,6 @@ namespace MetricReliableCollections
         {
             this.stateManagerReplica = stateManager;
             this.serializerResolver = serializerResolver;
-            this.metricSink = new AdditiveMetricSink(this.stateManagerReplica, MetricAggregateDictionaryName);
         }
 
         public event EventHandler<NotifyStateManagerChangedEventArgs> StateManagerChanged;
@@ -79,16 +78,6 @@ namespace MetricReliableCollections
         public Func<CancellationToken, Task<bool>> OnDataLossAsync
         {
             set { this.stateManagerReplica.OnDataLossAsync = value; }
-        }
-
-        public Task ClearAsync()
-        {
-            return this.stateManagerReplica.ClearAsync();
-        }
-
-        public Task ClearAsync(ITransaction tx)
-        {
-            return this.stateManagerReplica.ClearAsync(tx);
         }
 
         public ITransaction CreateTransaction()
@@ -148,7 +137,7 @@ namespace MetricReliableCollections
             ConditionalValue<IReliableState> result = await this.TryCreateOrGetMetricReliableCollectionAsync(tx, typeof(T), name, timeout);
 
             return result.HasValue
-                ? (T)result.Value
+                ? (T) result.Value
                 : await this.stateManagerReplica.GetOrAddAsync<T>(tx, name, timeout);
         }
 
@@ -211,7 +200,7 @@ namespace MetricReliableCollections
                 await tx.CommitAsync();
 
                 return result.HasValue
-                    ? new ConditionalValue<T>(true, (T)result.Value)
+                    ? new ConditionalValue<T>(true, (T) result.Value)
                     : await this.stateManagerReplica.TryGetAsync<T>(name);
             }
         }
@@ -228,45 +217,46 @@ namespace MetricReliableCollections
             return this.stateManagerReplica.OpenAsync(openMode, partition, cancellationToken);
         }
 
-        public Task ChangeRoleAsync(ReplicaRole newRole, CancellationToken cancellationToken)
+        public async Task ChangeRoleAsync(ReplicaRole newRole, CancellationToken cancellationToken)
         {
             // On primary and active secondary, start reporting aggregated load from all collections.
             // Each collection needs to have load metrics available on both primary and active secondary replicas
-            // which should be available through the metric sink.
-            // Collections will only be able to write metrics to the sink on primary, 
-            // but that's ok because the sink uses a replicated data store to make metrics available on secondary replicas.
             // Metric collections are created on-demand when requested from the state manager, 
             // which means they do not always exist on secondaries.
 
-            // For collections:
-            //  - primaries report load to the sink which gets replicated to secondaries.
-
-            // For state manager:
-            //  - primaries and secondaries read from the sink and report load.
-
             if (newRole == ReplicaRole.Primary || newRole == ReplicaRole.ActiveSecondary)
             {
-                this.reportTaskCancellation = new CancellationTokenSource();
-                this.reportTask = StartReportingMetrics(this.reportTaskCancellation.Token);
+                // For role transitions: P -> AS or AS -> P, the task should already be running.
+                // It's the same task for P and AS, so let it continue to run.
+                // If the task is null or not running, start a new one.
+                if (this.reportTask == null ||
+                    (this.reportTask.IsCanceled ||
+                     this.reportTask.IsCompleted ||
+                     this.reportTask.IsFaulted))
+                {
+                    this.reportTaskCancellation = new CancellationTokenSource();
+                    this.reportTask = this.StartReportingMetricsAsync(this.reportTaskCancellation.Token);
+                }
             }
             else
             {
-                this.CancelMetricReporting();
+                // For any role transition away from P or AS, cancel the reporting task.
+                await this.CancelMetricReportingAsync();
             }
 
-            return this.stateManagerReplica.ChangeRoleAsync(newRole, cancellationToken);
+            await this.stateManagerReplica.ChangeRoleAsync(newRole, cancellationToken);
         }
 
-        public Task CloseAsync(CancellationToken cancellationToken)
+        public async Task CloseAsync(CancellationToken cancellationToken)
         {
-            this.CancelMetricReporting();
+            await this.CancelMetricReportingAsync();
 
-            return this.stateManagerReplica.CloseAsync(cancellationToken);
+            await this.stateManagerReplica.CloseAsync(cancellationToken);
         }
 
         public void Abort()
         {
-            this.CancelMetricReporting();
+            Task t = this.CancelMetricReportingAsync();
 
             this.stateManagerReplica.Abort();
         }
@@ -292,51 +282,96 @@ namespace MetricReliableCollections
             return this.stateManagerReplica.RestoreAsync(backupFolderPath, restorePolicy, cancellationToken);
         }
 
-        private void CancelMetricReporting()
+        private async Task CancelMetricReportingAsync()
         {
-            if (this.reportTaskCancellation != null && !this.reportTaskCancellation.IsCancellationRequested)
+            if (this.reportTask != null &&
+                this.reportTaskCancellation != null &&
+                !this.reportTaskCancellation.IsCancellationRequested)
             {
                 try
                 {
                     this.reportTaskCancellation.Cancel();
+
+                    await this.reportTask.ConfigureAwait(false);
+                }
+                catch
+                {
+                    // log any errors from the reporting task but otherwise let them go
                 }
                 finally
                 {
-                    this.reportTaskCancellation.Dispose();
+                    try
+                    {
+                        this.reportTaskCancellation.Dispose();
+                        this.reportTask.Dispose();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
                 }
             }
         }
 
-        private Task StartReportingMetrics(CancellationToken token)
+        private Task StartReportingMetricsAsync(CancellationToken token)
         {
-            return Task.Run(async () =>
-            {
-                while (true)
+            return Task.Run(
+                async () =>
                 {
-                    token.ThrowIfCancellationRequested();
-
-                    try
+                    while (true)
                     {
-                        IEnumerable<LoadMetric> metrics = await this.metricSink.SumMetricsAsync(token);
+                        token.ThrowIfCancellationRequested();
 
-                        if (metrics != null)
+                        try
                         {
-                            this.partition.ReportLoad(metrics);
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        throw;
-                    }
-                    catch (Exception e)
-                    {
-                        // trace
-                    }
+                            Dictionary<string, int> totals = new Dictionary<string, int>();
 
-                    await Task.Delay(DefaultReportInterval, token);
-                }
-            },
-            token);
+                            await this.ForeachAsync(
+                                token,
+                                async item =>
+                                {
+                                    token.ThrowIfCancellationRequested();
+
+                                    IMetricReliableCollection metricCollection = item as IMetricReliableCollection;
+
+                                    if (metricCollection != null)
+                                    {
+                                        using (ITransaction tx = this.CreateTransaction())
+                                        {
+                                            IEnumerable<LoadMetric> metrics = await metricCollection.GetLoadMetricsAsync(tx, token);
+
+                                            foreach (LoadMetric metric in metrics)
+                                            {
+                                                if (totals.ContainsKey(metric.Name))
+                                                {
+                                                    totals[metric.Name] += metric.Value;
+                                                }
+                                                else
+                                                {
+                                                    totals[metric.Name] = metric.Value;
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+
+                            if (totals.Count > 0)
+                            {
+                                this.partition.ReportLoad(totals.Select(x => new LoadMetric(x.Key, x.Value/1024)));
+                            }
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            // trace
+                        }
+
+                        await Task.Delay(DefaultReportInterval, token);
+                    }
+                },
+                token);
         }
 
         /// <summary>
@@ -378,7 +413,6 @@ namespace MetricReliableCollections
                     MetricReliableDictionaryActivator.CreateFromReliableDictionaryType(
                         type,
                         innerStore,
-                        this.metricSink,
                         new BinaryValueConverter(name, this.serializerResolver)));
             }
 
@@ -401,7 +435,6 @@ namespace MetricReliableCollections
                         MetricReliableDictionaryActivator.CreateFromReliableDictionaryType(
                             type,
                             tryGetResult.Value,
-                            this.metricSink,
                             new BinaryValueConverter(name, this.serializerResolver)));
 
                     return result;
@@ -505,6 +538,5 @@ namespace MetricReliableCollections
                 this.stateManagerReplicaEnumerator.Reset();
             }
         }
-
     }
 }

@@ -12,9 +12,16 @@ namespace MetricReliableCollections
 
         public BinaryValue(ArraySegment<byte> buffer)
         {
-            this.Buffer = new byte[buffer.Count];
+            if (buffer.Count > 0)
+            {
+                this.Buffer = new byte[buffer.Count];
 
-            Array.Copy(buffer.Array, buffer.Offset, this.Buffer, 0, buffer.Count);
+                Array.Copy(buffer.Array, buffer.Offset, this.Buffer, 0, buffer.Count);
+            }
+            else
+            {
+                this.Buffer = new byte[0];
+            }
         }
 
         public override bool Equals(object obj)

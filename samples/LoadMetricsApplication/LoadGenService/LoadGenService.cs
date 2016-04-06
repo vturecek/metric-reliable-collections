@@ -9,7 +9,6 @@ namespace LoadGenService
     using System.Fabric;
     using System.Threading;
     using System.Threading.Tasks;
-    using MetricReliableCollections.Extensions;
     using Microsoft.ServiceFabric.Data;
     using Microsoft.ServiceFabric.Data.Collections;
     using Microsoft.ServiceFabric.Services.Communication.Runtime;
@@ -44,40 +43,63 @@ namespace LoadGenService
         {
             try
             {
-                IReliableDictionary<int, int> myDictionary = await this.StateManager.GetOrAddAsync<IReliableDictionary<int, int>>("store://myDictionary");
+                string[] dictionaries = {"store://d1", "store://d2", "premium://d1", "encrypted://aes"};
 
-                ServiceEventSource.Current.ServiceMessage(this, "Adding 1000 items..");
-                using (ITransaction tx = this.StateManager.CreateTransaction())
+                Random random = new Random();
+                double profile = random.NextDouble();
+
+                int size = profile < 0.5
+                    ? this.GetLowProfile()
+                    : this.GetHighProfile();
+
+                ServiceEventSource.Current.ServiceMessage(this, "Size: {0}", size);
+
+                while (true)
                 {
-                    for (int i = 0; i < 1000; ++i)
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    IReliableDictionary<int, int[]> dictionary =
+                        await this.StateManager.GetOrAddAsync<IReliableDictionary<int, int[]>>(dictionaries[random.Next(0, dictionaries.Length)]);
+
+                    using (ITransaction tx = this.StateManager.CreateTransaction())
                     {
-                        await myDictionary.SetAsync(tx, i, i);
+                        await dictionary.SetAsync(tx, random.Next(0, size), this.GetBlob(random.Next(size/2, size)));
+
+                        await tx.CommitAsync();
                     }
 
-                    await tx.CommitAsync();
+                    await Task.Delay(500, cancellationToken);
                 }
-                ServiceEventSource.Current.ServiceMessage(this, "Done.");
-
-                ServiceEventSource.Current.ServiceMessage(this, "Summing all values");
-                int sum = 0;
-                using (ITransaction tx = this.StateManager.CreateTransaction())
-                {
-                    await myDictionary.ForeachAsync(tx, cancellationToken, item => { sum += item.Value; });
-                }
-                ServiceEventSource.Current.ServiceMessage(this, "Done. Result: {0}", sum);
-
-                ServiceEventSource.Current.ServiceMessage(this, "Summing filtered values");
-                sum = 0;
-                using (ITransaction tx = this.StateManager.CreateTransaction())
-                {
-                    await myDictionary.ForeachAsync(tx, cancellationToken, key => key < 100, item => { sum += item.Value; });
-                }
-                ServiceEventSource.Current.ServiceMessage(this, "Done. Result: {0}", sum);
             }
             catch (Exception e)
             {
                 ServiceEventSource.Current.ServiceMessage(this, "Oops. {0}", e.ToString());
             }
+        }
+
+        private int[] GetBlob(int size)
+        {
+            Random random = new Random();
+
+            int[] blob = new int[size];
+            for (int i = 0; i < size; ++i)
+            {
+                blob[i] = random.Next();
+            }
+
+            return blob;
+        }
+
+        private int GetLowProfile()
+        {
+            Random random = new Random();
+            return random.Next(10, 100);
+        }
+
+        private int GetHighProfile()
+        {
+            Random random = new Random();
+            return random.Next(1000, 1500);
         }
     }
 }

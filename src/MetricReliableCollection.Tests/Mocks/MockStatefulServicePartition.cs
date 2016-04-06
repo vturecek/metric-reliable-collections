@@ -1,31 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Fabric;
-using System.Fabric.Health;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿// ------------------------------------------------------------
+//  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+// ------------------------------------------------------------
 
 namespace MetricReliableCollections.Tests.Mocks
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Fabric;
+    using System.Fabric.Health;
+
     internal class MockStatefulServicePartition : IStatefulServicePartition
     {
         public Action<IEnumerable<LoadMetric>> OnReportLoad { private get; set; }
 
-        public ServicePartitionInformation PartitionInfo
-        {
-            get; set;
-        }
+        public ServicePartitionInformation PartitionInfo { get; set; }
 
-        public PartitionAccessStatus ReadStatus
-        {
-            get; set;
-        }
+        public PartitionAccessStatus ReadStatus { get; set; }
 
-        public PartitionAccessStatus WriteStatus
-        {
-            get; set;
-        }
+        public PartitionAccessStatus WriteStatus { get; set; }
 
         public FabricReplicator CreateReplicator(IStateProvider stateProvider, ReplicatorSettings replicatorSettings)
         {

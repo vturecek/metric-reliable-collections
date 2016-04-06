@@ -33,18 +33,6 @@ namespace MetricReliableCollections.Tests.Mocks
 
         public event EventHandler<NotifyStateManagerChangedEventArgs> StateManagerChanged;
 
-        public Task ClearAsync(ITransaction tx)
-        {
-            this.store.Clear();
-            return Task.FromResult(true);
-        }
-
-        public Task ClearAsync()
-        {
-            this.store.Clear();
-            return Task.FromResult(true);
-        }
-
         public ITransaction CreateTransaction()
         {
             return new MockTransaction();
@@ -222,6 +210,18 @@ namespace MetricReliableCollections.Tests.Mocks
         public Task RestoreAsync(string backupFolderPath, RestorePolicy restorePolicy, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
+        }
+
+        public Task ClearAsync(ITransaction tx)
+        {
+            this.store.Clear();
+            return Task.FromResult(true);
+        }
+
+        public Task ClearAsync()
+        {
+            this.store.Clear();
+            return Task.FromResult(true);
         }
 
         private IReliableState GetDependency(Type t, Uri name)
