@@ -68,6 +68,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DataSizeUnits.cs" />
+    <Compile Include="DecimalLoadMetric.cs" />
     <Compile Include="Extensions\IAsyncEnumerableExtensions.cs" />
     <Compile Include="Extensions\ReliableDictionaryAsyncEnumerableExtensions.cs" />
     <Compile Include="IMetricReliableCollection.cs" />

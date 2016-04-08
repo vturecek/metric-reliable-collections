@@ -45,16 +45,16 @@ namespace MetricReliableCollections
             this.config = config;
         }
 
-        public async Task<IEnumerable<LoadMetric>> GetLoadMetricsAsync(ITransaction tx, CancellationToken cancellationToken)
+        public async Task<IEnumerable<DecimalLoadMetric>> GetLoadMetricsAsync(ITransaction tx, CancellationToken cancellationToken)
         {
-            int total = 0;
+            double total = 0;
 
             await this.store.ForeachAsync(tx, cancellationToken, item => { total += item.Key.Buffer.Length + item.Value.Buffer.Length; });
 
             return new[]
             {
-                new LoadMetric(this.config.MemoryMetricName, total),
-                new LoadMetric(this.config.DiskMetricName, total)
+                new DecimalLoadMetric(this.config.MemoryMetricName, total / (double)this.config.MemoryMetricUnits),
+                new DecimalLoadMetric(this.config.DiskMetricName, total / (double)this.config.DiskMetricUnits)
             };
         }
 

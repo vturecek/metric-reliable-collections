@@ -368,7 +368,7 @@ namespace MetricReliableCollections
 
                             if (loadMetrics.Any())
                             {
-                                this.partition.ReportLoad(loadMetrics.Select(metric => new LoadMetric(metric.Name, metric.Value / 1024)));
+                                this.partition.ReportLoad(loadMetrics);
                             }
                         }
                         catch (OperationCanceledException)

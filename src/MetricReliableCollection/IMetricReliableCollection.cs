@@ -12,6 +12,6 @@ namespace MetricReliableCollections
 
     internal interface IMetricReliableCollection
     {
-        Task<IEnumerable<LoadMetric>> GetLoadMetricsAsync(ITransaction tx, CancellationToken cancellationToken);
+        Task<IEnumerable<DecimalLoadMetric>> GetLoadMetricsAsync(ITransaction tx, CancellationToken cancellationToken);
     }
 }

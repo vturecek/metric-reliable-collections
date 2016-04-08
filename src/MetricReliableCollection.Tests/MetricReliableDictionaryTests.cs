@@ -19,100 +19,125 @@ namespace MetricReliableCollections.Tests
     public class MetricReliableDictionaryTests
     {
         [TestMethod]
-        public async Task GetLoadMetricsEmptyDictionary()
+        public Task GetLoadMetricsEmptyDictionary()
         {
-            int expected = 0;
-
-            MetricConfiguration config = this.GetConfig();
-            Uri collectionName = new Uri("test://dictionary");
-            MockReliableDictionary<BinaryValue, BinaryValue> store = new MockReliableDictionary<BinaryValue, BinaryValue>(collectionName);
-
-            BinaryValueConverter converter = new BinaryValueConverter(collectionName, new JsonReliableStateSerializerResolver());
-
-            MetricReliableDictionary<int, string> target = new MetricReliableDictionary<int, string>(store, converter, config);
-
-            using (ITransaction tx = new MockTransaction())
+            return RunDataSizeUnitsPermutationAsync(async config =>
             {
-                IEnumerable<LoadMetric> result = await target.GetLoadMetricsAsync(tx, CancellationToken.None);
+                int expected = 0;
 
-                Assert.AreEqual<int>(1, result.Count(x => x.Name == config.MemoryMetricName && x.Value == expected));
-                Assert.AreEqual<int>(1, result.Count(x => x.Name == config.DiskMetricName && x.Value == expected));
-            }
+                Uri collectionName = new Uri("test://dictionary");
+                MockReliableDictionary<BinaryValue, BinaryValue> store = new MockReliableDictionary<BinaryValue, BinaryValue>(collectionName);
+
+                BinaryValueConverter converter = new BinaryValueConverter(collectionName, new JsonReliableStateSerializerResolver());
+
+                MetricReliableDictionary<int, string> target = new MetricReliableDictionary<int, string>(store, converter, config);
+
+                using (ITransaction tx = new MockTransaction())
+                {
+                    IEnumerable<DecimalLoadMetric> result = await target.GetLoadMetricsAsync(tx, CancellationToken.None);
+
+                    Assert.AreEqual<int>(1, result.Count(x => x.Name == config.MemoryMetricName && x.Value == expected));
+                    Assert.AreEqual<int>(1, result.Count(x => x.Name == config.DiskMetricName && x.Value == expected));
+                }
+            });
         }
 
         [TestMethod]
-        public async Task GetLoadMetricsSingleItem()
+        public Task GetLoadMetricsSingleItem()
         {
-            int key = 1;
-            string value = "Homer";
-            MetricConfiguration config = this.GetConfig();
-            Uri collectionName = new Uri("test://dictionary");
-            MockReliableDictionary<BinaryValue, BinaryValue> store = new MockReliableDictionary<BinaryValue, BinaryValue>(collectionName);
-
-            BinaryValueConverter converter = new BinaryValueConverter(collectionName, new JsonReliableStateSerializerResolver());
-
-            MetricReliableDictionary<int, string> target = new MetricReliableDictionary<int, string>(store, converter, config);
-
-            using (ITransaction tx = new MockTransaction())
+            return this.RunDataSizeUnitsPermutationAsync(async config =>
             {
-                await target.SetAsync(tx, key, value);
-                await tx.CommitAsync();
-            }
+                Uri collectionName = new Uri("test://dictionary");
 
-            using (ITransaction tx = new MockTransaction())
-            {
-                IEnumerable<LoadMetric> result = await target.GetLoadMetricsAsync(tx, CancellationToken.None);
+                int key = 1;
+                string value = "Homer";
 
-                int expected = converter.Serialize<int>(key).Buffer.Length + converter.Serialize<string>(value).Buffer.Length;
+                BinaryValueConverter converter = new BinaryValueConverter(collectionName, new JsonReliableStateSerializerResolver());
 
-                Assert.AreEqual<int>(1, result.Count(x => x.Name == config.MemoryMetricName && x.Value == expected));
-                Assert.AreEqual<int>(1, result.Count(x => x.Name == config.DiskMetricName && x.Value == expected));
-            }
+                double size = 
+                    converter.Serialize<int>(key).Buffer.Length + converter.Serialize<string>(value).Buffer.Length;
+
+                double expectedMemory = size / (double)config.MemoryMetricUnits;
+                double expectedDisk = size / (double)config.DiskMetricUnits;
+
+                MockReliableDictionary<BinaryValue, BinaryValue> store = new MockReliableDictionary<BinaryValue, BinaryValue>(collectionName);
+                MetricReliableDictionary<int, string> target = new MetricReliableDictionary<int, string>(store, converter, config);
+
+                using (ITransaction tx = new MockTransaction())
+                {
+                    await target.SetAsync(tx, key, value);
+                    await tx.CommitAsync();
+                }
+
+                using (ITransaction tx = new MockTransaction())
+                {
+                    IEnumerable<DecimalLoadMetric> result = await target.GetLoadMetricsAsync(tx, CancellationToken.None);
+
+                    Assert.AreEqual<int>(1, result.Count(x => x.Name == config.MemoryMetricName && x.Value == expectedMemory));
+                    Assert.AreEqual<int>(1, result.Count(x => x.Name == config.DiskMetricName && x.Value == expectedDisk));
+                }
+            });
         }
 
         [TestMethod]
-        public async Task GetLoadMetricsMultipleItem()
+        public  Task GetLoadMetricsMultipleItem()
         {
-            int key1 = 1;
-            string value1 = "Homer";
-
-            int key2 = 2;
-            string value2 = "Simpson";
-
-            Uri collectionName = new Uri("test://dictionary");
-            MetricConfiguration config = this.GetConfig();
-            MockReliableDictionary<BinaryValue, BinaryValue> store = new MockReliableDictionary<BinaryValue, BinaryValue>(collectionName);
-
-            BinaryValueConverter converter = new BinaryValueConverter(collectionName, new JsonReliableStateSerializerResolver());
-
-            MetricReliableDictionary<int, string> target = new MetricReliableDictionary<int, string>(store, converter, config);
-
-            using (ITransaction tx = new MockTransaction())
+            return this.RunDataSizeUnitsPermutationAsync(async config =>
             {
-                await target.SetAsync(tx, key1, value1);
-                await target.SetAsync(tx, key2, value2);
-                await tx.CommitAsync();
-            }
-            using (ITransaction tx = new MockTransaction())
+                int key1 = 1;
+                string value1 = "Homer";
+
+                int key2 = 2;
+                string value2 = "Simpson";
+
+                Uri collectionName = new Uri("test://dictionary");
+                
+                BinaryValueConverter converter = new BinaryValueConverter(collectionName, new JsonReliableStateSerializerResolver());
+
+                double size =
+                        converter.Serialize<int>(key1).Buffer.Length + converter.Serialize<string>(value1).Buffer.Length +
+                        converter.Serialize<int>(key2).Buffer.Length + converter.Serialize<string>(value2).Buffer.Length;
+
+                double expectedMemory = size / (double)config.MemoryMetricUnits;
+                double expectedDisk = size / (double)config.DiskMetricUnits;
+
+                MockReliableDictionary<BinaryValue, BinaryValue> store = new MockReliableDictionary<BinaryValue, BinaryValue>(collectionName);
+                MetricReliableDictionary<int, string> target = new MetricReliableDictionary<int, string>(store, converter, config);
+
+                using (ITransaction tx = new MockTransaction())
+                {
+                    await target.SetAsync(tx, key1, value1);
+                    await target.SetAsync(tx, key2, value2);
+                    await tx.CommitAsync();
+                }
+                using (ITransaction tx = new MockTransaction())
+                {
+                    IEnumerable<DecimalLoadMetric> result = await target.GetLoadMetricsAsync(tx, CancellationToken.None);
+                    
+                    Assert.AreEqual<int>(1, result.Count(x => x.Name == config.MemoryMetricName && x.Value == expectedMemory));
+                    Assert.AreEqual<int>(1, result.Count(x => x.Name == config.DiskMetricName && x.Value == expectedDisk));
+                }
+            });
+        }
+
+        private async Task RunDataSizeUnitsPermutationAsync(Func<MetricConfiguration, Task> test)
+        {
+            foreach (DataSizeUnits memory in Enum.GetValues(typeof(DataSizeUnits)))
             {
-                IEnumerable<LoadMetric> result = await target.GetLoadMetricsAsync(tx, CancellationToken.None);
-
-                int expected =
-                    converter.Serialize<int>(key1).Buffer.Length + converter.Serialize<string>(value1).Buffer.Length +
-                    converter.Serialize<int>(key2).Buffer.Length + converter.Serialize<string>(value2).Buffer.Length;
-
-                Assert.AreEqual<int>(1, result.Count(x => x.Name == config.MemoryMetricName && x.Value == expected));
-                Assert.AreEqual<int>(1, result.Count(x => x.Name == config.DiskMetricName && x.Value == expected));
+                foreach (DataSizeUnits disk in Enum.GetValues(typeof(DataSizeUnits)))
+                {
+                    await test(this.GetConfig(memory, disk));
+                }
             }
         }
 
-        private MetricConfiguration GetConfig()
+        private MetricConfiguration GetConfig(DataSizeUnits memoryUnits, DataSizeUnits diskUnits)
         {
             return new MetricConfiguration(
                 "MemoryKB",
-                DataSizeUnits.Kilobytes,
+                memoryUnits,
                 "DiskKB",
-                DataSizeUnits.Kilobytes,
+                diskUnits,
                 TimeSpan.FromSeconds(30),
                 TimeSpan.FromSeconds(4));
         }

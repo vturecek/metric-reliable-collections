@@ -11,7 +11,7 @@ namespace MetricReliableCollections
     using System.Threading.Tasks;
     using MetricReliableCollections.Extensions;
     using Microsoft.ServiceFabric.Data;
-
+    using System;
     /// <summary>
     /// Aggregates load metrics for all IMetricReliableCollection in a state manager.
     /// </summary>
@@ -19,7 +19,7 @@ namespace MetricReliableCollections
     {
         public async Task<IEnumerable<LoadMetric>> Aggregate(IReliableStateManager stateManager, CancellationToken cancellationToken)
         {
-            Dictionary<string, int> totals = new Dictionary<string, int>();
+            Dictionary<string, double> totals = new Dictionary<string, double>();
 
             await stateManager.ForeachAsync(
                 cancellationToken,
@@ -33,9 +33,9 @@ namespace MetricReliableCollections
                     {
                         using (ITransaction tx = stateManager.CreateTransaction())
                         {
-                            IEnumerable<LoadMetric> metrics = await metricCollection.GetLoadMetricsAsync(tx, cancellationToken);
+                            IEnumerable<DecimalLoadMetric> metrics = await metricCollection.GetLoadMetricsAsync(tx, cancellationToken);
 
-                            foreach (LoadMetric metric in metrics)
+                            foreach (DecimalLoadMetric metric in metrics)
                             {
                                 if (totals.ContainsKey(metric.Name))
                                 {
@@ -50,7 +50,7 @@ namespace MetricReliableCollections
                     }
                 });
 
-            return totals.Select(x => new LoadMetric(x.Key, x.Value));
+            return totals.Select(x => new LoadMetric(x.Key, (int)Math.Round(x.Value)));
         }
     }
 }

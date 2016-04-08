@@ -34,7 +34,7 @@ namespace MetricReliableCollections.Tests
             MockReliableStateManager stateManager = new MockReliableStateManager();
             MockReliableDictionary<int, int> dictionary = new MockReliableDictionary<int, int>(name);
             dictionary.OnGetLoadMetrics = () =>
-                new LoadMetric[0];
+                new DecimalLoadMetric[0];
 
             stateManager.SetMock(name, dictionary);
 
@@ -57,10 +57,10 @@ namespace MetricReliableCollections.Tests
             MockReliableDictionary<int, int> dictionary = new MockReliableDictionary<int, int>(name);
 
             dictionary.OnGetLoadMetrics = () =>
-                new LoadMetric[]
+                new DecimalLoadMetric[]
                 {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value)
+                    new DecimalLoadMetric(expectedMetric1, (double)expectedMetric1Value),
+                    new DecimalLoadMetric(expectedMetric2, (double)expectedMetric2Value)
                 };
 
             stateManager.SetMock(name, dictionary);
@@ -78,6 +78,9 @@ namespace MetricReliableCollections.Tests
             string expectedMetric1 = "one";
             string expectedMetric2 = "two";
 
+            double inputMetric1Value = 1.9;
+            double inputMetric2Value = 4.1;
+
             int expectedMetric1Value = 2;
             int expectedMetric2Value = 4;
 
@@ -89,17 +92,17 @@ namespace MetricReliableCollections.Tests
             MockReliableDictionary<int, int> dictionary2 = new MockReliableDictionary<int, int>(collection2Name);
 
             dictionary1.OnGetLoadMetrics = () =>
-                new LoadMetric[]
+                new DecimalLoadMetric[]
                 {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value/2),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value/2)
+                    new DecimalLoadMetric(expectedMetric1, inputMetric1Value/2.0),
+                    new DecimalLoadMetric(expectedMetric2, inputMetric2Value/2.0)
                 };
 
             dictionary2.OnGetLoadMetrics = () =>
-                new LoadMetric[]
+                new DecimalLoadMetric[]
                 {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value/2),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value/2)
+                    new DecimalLoadMetric(expectedMetric1, inputMetric1Value/2.0),
+                    new DecimalLoadMetric(expectedMetric2, inputMetric2Value/2.0)
                 };
 
             stateManager.SetMock(collection1Name, dictionary1);
@@ -132,17 +135,17 @@ namespace MetricReliableCollections.Tests
             MockReliableDictionary<int, int> dictionary2 = new MockReliableDictionary<int, int>(collection2Name);
 
             dictionary1.OnGetLoadMetrics = () =>
-                new LoadMetric[]
+                new DecimalLoadMetric[]
                 {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value)
+                    new DecimalLoadMetric(expectedMetric1, expectedMetric1Value),
+                    new DecimalLoadMetric(expectedMetric2, expectedMetric2Value)
                 };
 
 
             dictionary2.OnGetLoadMetrics = () =>
-                new LoadMetric[]
+                new DecimalLoadMetric[]
                 {
-                    new LoadMetric(expectedMetric3, expectedMetric3Value)
+                    new DecimalLoadMetric(expectedMetric3, expectedMetric3Value)
                 };
 
             stateManager.SetMock(collection1Name, dictionary1);

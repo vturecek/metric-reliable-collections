@@ -68,7 +68,7 @@ namespace LoadGenService
                         await tx.CommitAsync();
                     }
 
-                    await Task.Delay(300, cancellationToken);
+                    await Task.Delay(500, cancellationToken);
                 }
             }
             catch (Exception e)

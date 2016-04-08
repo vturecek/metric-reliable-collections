@@ -25,9 +25,9 @@ namespace MetricReliableCollections.Tests.Mocks
             this.Name = name;
         }
 
-        public Func<IEnumerable<LoadMetric>> OnGetLoadMetrics { get; set; }
+        public Func<IEnumerable<DecimalLoadMetric>> OnGetLoadMetrics { get; set; }
 
-        public Task<IEnumerable<LoadMetric>> GetLoadMetricsAsync(ITransaction tx, CancellationToken cancellationToken)
+        public Task<IEnumerable<DecimalLoadMetric>> GetLoadMetricsAsync(ITransaction tx, CancellationToken cancellationToken)
         {
             return Task.FromResult(this.OnGetLoadMetrics());
         }
