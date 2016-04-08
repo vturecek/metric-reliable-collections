@@ -67,12 +67,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataSizeUnits.cs" />
     <Compile Include="Extensions\IAsyncEnumerableExtensions.cs" />
     <Compile Include="Extensions\ReliableDictionaryAsyncEnumerableExtensions.cs" />
     <Compile Include="IMetricReliableCollection.cs" />
     <Compile Include="IReliableStateSerializer.cs" />
     <Compile Include="IReliableStateSerializerResolver.cs" />
     <Compile Include="MetricAggregator.cs" />
+    <Compile Include="MetricConfigurationSettingsXml.cs" />
+    <Compile Include="MetricConfiguration.cs" />
     <Compile Include="ReliableStateSerializers\JsonReliableStateSerializer.cs" />
     <Compile Include="ReliableStateSerializers\JsonReliableStateSerializerResolver.cs" />
     <Compile Include="MetricReliableDictionaryAsyncEnumerable.cs" />

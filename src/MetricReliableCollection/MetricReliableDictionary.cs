@@ -17,13 +17,14 @@ namespace MetricReliableCollections
     internal static class MetricReliableDictionaryActivator
     {
         internal static IReliableState CreateFromReliableDictionaryType(
-            Type type, IReliableDictionary<BinaryValue, BinaryValue> innerStore, BinaryValueConverter converter)
+            Type type, IReliableDictionary<BinaryValue, BinaryValue> innerStore, BinaryValueConverter converter, MetricConfiguration config)
         {
             return (IReliableState) Activator.CreateInstance(
                 typeof(MetricReliableDictionary<,>).MakeGenericType(
                     type.GetGenericArguments()),
                 innerStore,
-                converter);
+                converter,
+                config);
         }
     }
 
@@ -34,12 +35,14 @@ namespace MetricReliableCollections
 
         private readonly BinaryValueConverter converter;
 
+        private readonly MetricConfiguration config;
 
         public MetricReliableDictionary(
-            IReliableDictionary<BinaryValue, BinaryValue> store, BinaryValueConverter converter)
+            IReliableDictionary<BinaryValue, BinaryValue> store, BinaryValueConverter converter, MetricConfiguration config)
         {
             this.store = store;
             this.converter = converter;
+            this.config = config;
         }
 
         public async Task<IEnumerable<LoadMetric>> GetLoadMetricsAsync(ITransaction tx, CancellationToken cancellationToken)
@@ -50,8 +53,8 @@ namespace MetricReliableCollections
 
             return new[]
             {
-                new LoadMetric(MetricReliableStateManager.MemoryMetricName, total),
-                new LoadMetric(MetricReliableStateManager.DiskMetricName, total)
+                new LoadMetric(this.config.MemoryMetricName, total),
+                new LoadMetric(this.config.DiskMetricName, total)
             };
         }
 
@@ -69,7 +72,7 @@ namespace MetricReliableCollections
 
         public Task AddAsync(ITransaction tx, TKey key, TValue value)
         {
-            return this.AddAsync(tx, key, value, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.AddAsync(tx, key, value, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public Task AddAsync(ITransaction tx, TKey key, TValue value, TimeSpan timeout, CancellationToken cancellationToken)
@@ -79,12 +82,12 @@ namespace MetricReliableCollections
 
         public Task<TValue> AddOrUpdateAsync(ITransaction tx, TKey key, TValue addValue, Func<TKey, TValue, TValue> updateValueFactory)
         {
-            return this.AddOrUpdateAsync(tx, key, addValue, updateValueFactory, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.AddOrUpdateAsync(tx, key, addValue, updateValueFactory, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public Task<TValue> AddOrUpdateAsync(ITransaction tx, TKey key, Func<TKey, TValue> addValueFactory, Func<TKey, TValue, TValue> updateValueFactory)
         {
-            return this.AddOrUpdateAsync(tx, key, addValueFactory, updateValueFactory, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.AddOrUpdateAsync(tx, key, addValueFactory, updateValueFactory, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public async Task<TValue> AddOrUpdateAsync(
@@ -128,12 +131,12 @@ namespace MetricReliableCollections
 
         public Task<bool> ContainsKeyAsync(ITransaction tx, TKey key)
         {
-            return this.ContainsKeyAsync(tx, key, LockMode.Default, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.ContainsKeyAsync(tx, key, LockMode.Default, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public Task<bool> ContainsKeyAsync(ITransaction tx, TKey key, LockMode lockMode)
         {
-            return this.ContainsKeyAsync(tx, key, lockMode, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.ContainsKeyAsync(tx, key, lockMode, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public Task<bool> ContainsKeyAsync(ITransaction tx, TKey key, TimeSpan timeout, CancellationToken cancellationToken)
@@ -175,12 +178,12 @@ namespace MetricReliableCollections
 
         public Task<TValue> GetOrAddAsync(ITransaction tx, TKey key, TValue value)
         {
-            return this.GetOrAddAsync(tx, key, value, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.GetOrAddAsync(tx, key, value, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public Task<TValue> GetOrAddAsync(ITransaction tx, TKey key, Func<TKey, TValue> valueFactory)
         {
-            return this.GetOrAddAsync(tx, key, valueFactory, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.GetOrAddAsync(tx, key, valueFactory, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public async Task<TValue> GetOrAddAsync(ITransaction tx, TKey key, TValue value, TimeSpan timeout, CancellationToken cancellationToken)
@@ -205,7 +208,7 @@ namespace MetricReliableCollections
 
         public Task SetAsync(ITransaction tx, TKey key, TValue value)
         {
-            return this.SetAsync(tx, key, value, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.SetAsync(tx, key, value, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public Task SetAsync(ITransaction tx, TKey key, TValue value, TimeSpan timeout, CancellationToken cancellationToken)
@@ -215,7 +218,7 @@ namespace MetricReliableCollections
 
         public Task<bool> TryAddAsync(ITransaction tx, TKey key, TValue value)
         {
-            return this.TryAddAsync(tx, key, value, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.TryAddAsync(tx, key, value, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public Task<bool> TryAddAsync(ITransaction tx, TKey key, TValue value, TimeSpan timeout, CancellationToken cancellationToken)
@@ -225,12 +228,12 @@ namespace MetricReliableCollections
 
         public Task<ConditionalValue<TValue>> TryGetValueAsync(ITransaction tx, TKey key)
         {
-            return this.TryGetValueAsync(tx, key, LockMode.Default, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.TryGetValueAsync(tx, key, LockMode.Default, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public Task<ConditionalValue<TValue>> TryGetValueAsync(ITransaction tx, TKey key, LockMode lockMode)
         {
-            return this.TryGetValueAsync(tx, key, lockMode, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.TryGetValueAsync(tx, key, lockMode, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public Task<ConditionalValue<TValue>> TryGetValueAsync(ITransaction tx, TKey key, TimeSpan timeout, CancellationToken cancellationToken)
@@ -251,7 +254,7 @@ namespace MetricReliableCollections
 
         public Task<ConditionalValue<TValue>> TryRemoveAsync(ITransaction tx, TKey key)
         {
-            return this.TryRemoveAsync(tx, key, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.TryRemoveAsync(tx, key, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public async Task<ConditionalValue<TValue>> TryRemoveAsync(ITransaction tx, TKey key, TimeSpan timeout, CancellationToken cancellationToken)
@@ -265,7 +268,7 @@ namespace MetricReliableCollections
 
         public Task<bool> TryUpdateAsync(ITransaction tx, TKey key, TValue newValue, TValue comparisonValue)
         {
-            return this.TryUpdateAsync(tx, key, newValue, comparisonValue, TimeSpan.FromSeconds(4), CancellationToken.None);
+            return this.TryUpdateAsync(tx, key, newValue, comparisonValue, this.config.DefaultOperationTimeout, CancellationToken.None);
         }
 
         public Task<bool> TryUpdateAsync(

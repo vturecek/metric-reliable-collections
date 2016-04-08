@@ -23,19 +23,20 @@ namespace MetricReliableCollections.Tests
         {
             int expected = 0;
 
+            MetricConfiguration config = this.GetConfig();
             Uri collectionName = new Uri("test://dictionary");
             MockReliableDictionary<BinaryValue, BinaryValue> store = new MockReliableDictionary<BinaryValue, BinaryValue>(collectionName);
 
             BinaryValueConverter converter = new BinaryValueConverter(collectionName, new JsonReliableStateSerializerResolver());
 
-            MetricReliableDictionary<int, string> target = new MetricReliableDictionary<int, string>(store, converter);
+            MetricReliableDictionary<int, string> target = new MetricReliableDictionary<int, string>(store, converter, config);
 
             using (ITransaction tx = new MockTransaction())
             {
                 IEnumerable<LoadMetric> result = await target.GetLoadMetricsAsync(tx, CancellationToken.None);
 
-                Assert.AreEqual<int>(1, result.Count(x => x.Name == MetricReliableStateManager.MemoryMetricName && x.Value == expected));
-                Assert.AreEqual<int>(1, result.Count(x => x.Name == MetricReliableStateManager.DiskMetricName && x.Value == expected));
+                Assert.AreEqual<int>(1, result.Count(x => x.Name == config.MemoryMetricName && x.Value == expected));
+                Assert.AreEqual<int>(1, result.Count(x => x.Name == config.DiskMetricName && x.Value == expected));
             }
         }
 
@@ -44,12 +45,13 @@ namespace MetricReliableCollections.Tests
         {
             int key = 1;
             string value = "Homer";
+            MetricConfiguration config = this.GetConfig();
             Uri collectionName = new Uri("test://dictionary");
             MockReliableDictionary<BinaryValue, BinaryValue> store = new MockReliableDictionary<BinaryValue, BinaryValue>(collectionName);
 
             BinaryValueConverter converter = new BinaryValueConverter(collectionName, new JsonReliableStateSerializerResolver());
 
-            MetricReliableDictionary<int, string> target = new MetricReliableDictionary<int, string>(store, converter);
+            MetricReliableDictionary<int, string> target = new MetricReliableDictionary<int, string>(store, converter, config);
 
             using (ITransaction tx = new MockTransaction())
             {
@@ -63,8 +65,8 @@ namespace MetricReliableCollections.Tests
 
                 int expected = converter.Serialize<int>(key).Buffer.Length + converter.Serialize<string>(value).Buffer.Length;
 
-                Assert.AreEqual<int>(1, result.Count(x => x.Name == MetricReliableStateManager.MemoryMetricName && x.Value == expected));
-                Assert.AreEqual<int>(1, result.Count(x => x.Name == MetricReliableStateManager.DiskMetricName && x.Value == expected));
+                Assert.AreEqual<int>(1, result.Count(x => x.Name == config.MemoryMetricName && x.Value == expected));
+                Assert.AreEqual<int>(1, result.Count(x => x.Name == config.DiskMetricName && x.Value == expected));
             }
         }
 
@@ -78,11 +80,12 @@ namespace MetricReliableCollections.Tests
             string value2 = "Simpson";
 
             Uri collectionName = new Uri("test://dictionary");
+            MetricConfiguration config = this.GetConfig();
             MockReliableDictionary<BinaryValue, BinaryValue> store = new MockReliableDictionary<BinaryValue, BinaryValue>(collectionName);
 
             BinaryValueConverter converter = new BinaryValueConverter(collectionName, new JsonReliableStateSerializerResolver());
 
-            MetricReliableDictionary<int, string> target = new MetricReliableDictionary<int, string>(store, converter);
+            MetricReliableDictionary<int, string> target = new MetricReliableDictionary<int, string>(store, converter, config);
 
             using (ITransaction tx = new MockTransaction())
             {
@@ -98,9 +101,20 @@ namespace MetricReliableCollections.Tests
                     converter.Serialize<int>(key1).Buffer.Length + converter.Serialize<string>(value1).Buffer.Length +
                     converter.Serialize<int>(key2).Buffer.Length + converter.Serialize<string>(value2).Buffer.Length;
 
-                Assert.AreEqual<int>(1, result.Count(x => x.Name == MetricReliableStateManager.MemoryMetricName && x.Value == expected));
-                Assert.AreEqual<int>(1, result.Count(x => x.Name == MetricReliableStateManager.DiskMetricName && x.Value == expected));
+                Assert.AreEqual<int>(1, result.Count(x => x.Name == config.MemoryMetricName && x.Value == expected));
+                Assert.AreEqual<int>(1, result.Count(x => x.Name == config.DiskMetricName && x.Value == expected));
             }
+        }
+
+        private MetricConfiguration GetConfig()
+        {
+            return new MetricConfiguration(
+                "MemoryKB",
+                DataSizeUnits.Kilobytes,
+                "DiskKB",
+                DataSizeUnits.Kilobytes,
+                TimeSpan.FromSeconds(30),
+                TimeSpan.FromSeconds(4));
         }
     }
 }

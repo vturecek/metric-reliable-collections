@@ -24,12 +24,6 @@ namespace MetricReliableCollections.Tests.Mocks
             {typeof(IReliableQueue<>), typeof(MockReliableQueue<>)}
         };
 
-        public void SetMock<TKey, TValue>(Uri name, IReliableDictionary<TKey, TValue> dictionary)
-            where TKey : IComparable<TKey>, IEquatable<TKey>
-        {
-            this.store[name] = dictionary;
-        }
-            
         public Func<CancellationToken, Task<bool>> OnDataLossAsync
         {
             set { throw new NotImplementedException(); }
@@ -216,6 +210,12 @@ namespace MetricReliableCollections.Tests.Mocks
         public Task RestoreAsync(string backupFolderPath, RestorePolicy restorePolicy, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
+        }
+
+        public void SetMock<TKey, TValue>(Uri name, IReliableDictionary<TKey, TValue> dictionary)
+            where TKey : IComparable<TKey>, IEquatable<TKey>
+        {
+            this.store[name] = dictionary;
         }
 
         public Task ClearAsync(ITransaction tx)

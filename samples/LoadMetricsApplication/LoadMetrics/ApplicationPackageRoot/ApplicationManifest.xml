@@ -8,7 +8,7 @@
    <DefaultServices>
       <Service Name="LoadGenService">
          <StatefulService ServiceTypeName="LoadGenServiceType" TargetReplicaSetSize="3" MinReplicaSetSize="2">
-            <UniformInt64Partition PartitionCount="10" LowKey="-100" HighKey="100" />
+            <UniformInt64Partition PartitionCount="30" LowKey="0" HighKey="30" />
             <LoadMetrics>
                <LoadMetric Name="MemoryKB" />
                <LoadMetric Name="DiskKB" />

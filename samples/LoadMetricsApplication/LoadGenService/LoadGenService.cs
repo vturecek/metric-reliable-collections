@@ -68,7 +68,7 @@ namespace LoadGenService
                         await tx.CommitAsync();
                     }
 
-                    await Task.Delay(500, cancellationToken);
+                    await Task.Delay(300, cancellationToken);
                 }
             }
             catch (Exception e)
@@ -93,7 +93,7 @@ namespace LoadGenService
         private int GetLowProfile()
         {
             Random random = new Random();
-            return random.Next(10, 100);
+            return random.Next(2, 20);
         }
 
         private int GetHighProfile()

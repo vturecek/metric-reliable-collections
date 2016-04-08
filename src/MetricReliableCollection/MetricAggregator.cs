@@ -4,13 +4,13 @@
 
 namespace MetricReliableCollections
 {
-    using Microsoft.ServiceFabric.Data;
     using System.Collections.Generic;
     using System.Fabric;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using MetricReliableCollections.Extensions;
+    using Microsoft.ServiceFabric.Data;
 
     /// <summary>
     /// Aggregates load metrics for all IMetricReliableCollection in a state manager.

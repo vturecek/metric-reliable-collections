@@ -11,17 +11,16 @@ namespace MetricReliableCollections
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using MetricReliableCollections.Extensions;
     using Microsoft.ServiceFabric.Data;
     using Microsoft.ServiceFabric.Data.Collections;
     using Microsoft.ServiceFabric.Data.Notifications;
 
+    /// <summary>
+    /// A Reliable State Manager that automatically reports load metrics
+    /// on Reliable Collections and adds better support for custom serialization.
+    /// </summary>
     public class MetricReliableStateManager : IReliableStateManagerReplica
     {
-        internal const string MemoryMetricName = "MemoryKB";
-
-        internal const string DiskMetricName = "DiskKB";
-
         /// <summary>
         /// collections that are used for metadata use this URI scheme for their name.
         /// </summary>
@@ -32,15 +31,13 @@ namespace MetricReliableCollections
         /// </summary>
         private const string MetricCollectionTypeDictionaryName = MetricMetadataStoreScheme + "://metriccollectiontypes";
 
-        private static readonly TimeSpan DefaultReportInterval = TimeSpan.FromSeconds(30);
-
-        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(4);
-
         private readonly ConcurrentDictionary<Uri, object> collectionCache = new ConcurrentDictionary<Uri, object>();
 
         private readonly IReliableStateManagerReplica stateManagerReplica;
 
         private readonly IReliableStateSerializerResolver serializerResolver;
+
+        private readonly MetricConfiguration config;
 
         private IReliableDictionary<string, string> collectionTypeNamesInstance;
 
@@ -50,30 +47,39 @@ namespace MetricReliableCollections
 
         private Task reportTask;
 
-        private ReplicaRole currentRole = ReplicaRole.Unknown;
-
-        public MetricReliableStateManager(StatefulServiceContext context, IReliableStateSerializerResolver serializerResolver)
+        /// <summary>
+        /// Creates a new instance of MetricReliableStateManager.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="serializerResolver"></param>
+        /// <param name="configProvider"></param>
+        /// <param name="stateManager">
+        /// Best to leave this null and let the constructor create one that's configured with a fast binary serializer.
+        /// Beware: if you pass in your own instance of ReliableStateManager, it will use DataContract.
+        /// </param>
+        public MetricReliableStateManager(
+            StatefulServiceContext context, IReliableStateSerializerResolver serializerResolver, MetricConfiguration config = null,
+            IReliableStateManagerReplica stateManager = null)
         {
-            this.stateManagerReplica = new ReliableStateManager(
-                context,
-                new ReliableStateManagerConfiguration(
-                    onInitializeStateSerializersEvent: () =>
-                        Task.FromResult(this.stateManagerReplica.TryAddStateSerializer<BinaryValue>(new BinaryValueStateSerializer()))));
-
             this.serializerResolver = serializerResolver;
-        }
+            this.config = config ?? new MetricConfigurationSettingsXml(context);
+            this.stateManagerReplica =
+                stateManager ??
+                new ReliableStateManager(
+                    context,
+                    new ReliableStateManagerConfiguration(
+                        onInitializeStateSerializersEvent: () =>
+                        {
+                            this.stateManagerReplica.StateManagerChanged += this.StateManagerReplica_StateManagerChanged;
+                            this.stateManagerReplica.TransactionChanged += this.StateManagerReplica_TransactionChanged;
 
-        internal MetricReliableStateManager(
-            StatefulServiceContext context, IReliableStateSerializerResolver serializerResolver, IReliableStateManagerReplica stateManager)
-        {
-            this.stateManagerReplica = stateManager;
-            this.serializerResolver = serializerResolver;
+                            return Task.FromResult(this.stateManagerReplica.TryAddStateSerializer<BinaryValue>(new BinaryValueStateSerializer()));
+                        }));
         }
 
         public event EventHandler<NotifyStateManagerChangedEventArgs> StateManagerChanged;
 
         public event EventHandler<NotifyTransactionChangedEventArgs> TransactionChanged;
-
 
         public Func<CancellationToken, Task<bool>> OnDataLossAsync
         {
@@ -97,7 +103,7 @@ namespace MetricReliableCollections
 
         public Task<T> GetOrAddAsync<T>(Uri name) where T : IReliableState
         {
-            return this.GetOrAddAsync<T>(name, DefaultTimeout);
+            return this.GetOrAddAsync<T>(name, this.config.DefaultOperationTimeout);
         }
 
         public Task<T> GetOrAddAsync<T>(string name, TimeSpan timeout) where T : IReliableState
@@ -124,7 +130,7 @@ namespace MetricReliableCollections
 
         public Task<T> GetOrAddAsync<T>(ITransaction tx, Uri name) where T : IReliableState
         {
-            return this.GetOrAddAsync<T>(tx, name, DefaultTimeout);
+            return this.GetOrAddAsync<T>(tx, name, this.config.DefaultOperationTimeout);
         }
 
         public Task<T> GetOrAddAsync<T>(ITransaction tx, string name, TimeSpan timeout) where T : IReliableState
@@ -143,12 +149,12 @@ namespace MetricReliableCollections
 
         public Task RemoveAsync(string name)
         {
-            return this.RemoveAsync(new Uri(name), DefaultTimeout);
+            return this.RemoveAsync(new Uri(name), this.config.DefaultOperationTimeout);
         }
 
         public Task RemoveAsync(Uri name)
         {
-            return this.RemoveAsync(name, DefaultTimeout);
+            return this.RemoveAsync(name, this.config.DefaultOperationTimeout);
         }
 
         public Task RemoveAsync(ITransaction tx, string name)
@@ -168,7 +174,7 @@ namespace MetricReliableCollections
 
         public Task RemoveAsync(ITransaction tx, Uri name)
         {
-            return this.RemoveAsync(tx, name, DefaultTimeout);
+            return this.RemoveAsync(tx, name, this.config.DefaultOperationTimeout);
         }
 
         public Task RemoveAsync(ITransaction tx, string name, TimeSpan timeout)
@@ -205,25 +211,61 @@ namespace MetricReliableCollections
             }
         }
 
-        public void Initialize(StatefulServiceInitializationParameters initializationParameters)
+        public Task BackupAsync(Func<BackupInfo, CancellationToken, Task<bool>> backupCallback)
+        {
+            return this.stateManagerReplica.BackupAsync(backupCallback);
+        }
+
+        public Task BackupAsync(
+            BackupOption option, TimeSpan timeout, CancellationToken cancellationToken, Func<BackupInfo, CancellationToken, Task<bool>> backupCallback)
+        {
+            return this.stateManagerReplica.BackupAsync(option, timeout, cancellationToken, backupCallback);
+        }
+
+        public Task RestoreAsync(string backupFolderPath)
+        {
+            return this.stateManagerReplica.RestoreAsync(backupFolderPath);
+        }
+
+        public Task RestoreAsync(string backupFolderPath, RestorePolicy restorePolicy, CancellationToken cancellationToken)
+        {
+            return this.stateManagerReplica.RestoreAsync(backupFolderPath, restorePolicy, cancellationToken);
+        }
+
+        /// <summary>
+        /// This does nothing.
+        /// </summary>
+        /// <param name="initializationParameters"></param>
+        void IStateProviderReplica.Initialize(StatefulServiceInitializationParameters initializationParameters)
         {
             this.stateManagerReplica.Initialize(initializationParameters);
         }
 
-        public Task<IReplicator> OpenAsync(ReplicaOpenMode openMode, IStatefulServicePartition partition, CancellationToken cancellationToken)
+        /// <summary>
+        /// When the replica opens, saves the partition info.
+        /// </summary>
+        /// <param name="openMode"></param>
+        /// <param name="partition"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        Task<IReplicator> IStateProviderReplica.OpenAsync(ReplicaOpenMode openMode, IStatefulServicePartition partition, CancellationToken cancellationToken)
         {
             this.partition = partition;
 
             return this.stateManagerReplica.OpenAsync(openMode, partition, cancellationToken);
         }
 
-        public async Task ChangeRoleAsync(ReplicaRole newRole, CancellationToken cancellationToken)
+        /// <summary> 
+        /// On primary and active secondary, start reporting aggregated load from all collections.
+        /// Each collection needs to have load metrics available on both primary and active secondary replicas
+        /// Metric collections are created on-demand when requested from the state manager, 
+        /// which means they do not always exist on secondaries.
+        /// </summary>
+        /// <param name="newRole"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async Task IStateProviderReplica.ChangeRoleAsync(ReplicaRole newRole, CancellationToken cancellationToken)
         {
-            // On primary and active secondary, start reporting aggregated load from all collections.
-            // Each collection needs to have load metrics available on both primary and active secondary replicas
-            // Metric collections are created on-demand when requested from the state manager, 
-            // which means they do not always exist on secondaries.
-
             if (newRole == ReplicaRole.Primary || newRole == ReplicaRole.ActiveSecondary)
             {
                 // For role transitions: P -> AS or AS -> P, the task should already be running.
@@ -247,41 +289,32 @@ namespace MetricReliableCollections
             await this.stateManagerReplica.ChangeRoleAsync(newRole, cancellationToken);
         }
 
-        public async Task CloseAsync(CancellationToken cancellationToken)
+        /// <summary>
+        /// Cancels the metric reporting task and closes the state manager.
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async Task IStateProviderReplica.CloseAsync(CancellationToken cancellationToken)
         {
             await this.CancelMetricReportingAsync();
 
             await this.stateManagerReplica.CloseAsync(cancellationToken);
         }
 
-        public void Abort()
+        /// <summary>
+        /// Cancels the metric reporting task and aborts the state manager.
+        /// </summary>
+        void IStateProviderReplica.Abort()
         {
             Task t = this.CancelMetricReportingAsync();
 
             this.stateManagerReplica.Abort();
         }
 
-        public Task BackupAsync(Func<BackupInfo, CancellationToken, Task<bool>> backupCallback)
-        {
-            return this.stateManagerReplica.BackupAsync(backupCallback);
-        }
-
-        public Task BackupAsync(
-            BackupOption option, TimeSpan timeout, CancellationToken cancellationToken, Func<BackupInfo, CancellationToken, Task<bool>> backupCallback)
-        {
-            return this.stateManagerReplica.BackupAsync(option, timeout, cancellationToken, backupCallback);
-        }
-
-        public Task RestoreAsync(string backupFolderPath)
-        {
-            return this.stateManagerReplica.RestoreAsync(backupFolderPath);
-        }
-
-        public Task RestoreAsync(string backupFolderPath, RestorePolicy restorePolicy, CancellationToken cancellationToken)
-        {
-            return this.stateManagerReplica.RestoreAsync(backupFolderPath, restorePolicy, cancellationToken);
-        }
-
+        /// <summary>
+        /// Cancels the metric reporting task and waits for it to complete.
+        /// </summary>
+        /// <returns></returns>
         private async Task CancelMetricReportingAsync()
         {
             if (this.reportTask != null &&
@@ -312,6 +345,12 @@ namespace MetricReliableCollections
             }
         }
 
+        /// <summary>
+        /// Starts a metric report task that loops infinitely,
+        /// reporting aggregated load metrics from all collections in the state manager on each iteration.
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         private Task StartReportingMetricsAsync(CancellationToken cancellationToken)
         {
             return Task.Run(
@@ -329,19 +368,27 @@ namespace MetricReliableCollections
 
                             if (loadMetrics.Any())
                             {
-                                this.partition.ReportLoad(loadMetrics);
+                                this.partition.ReportLoad(loadMetrics.Select(metric => new LoadMetric(metric.Name, metric.Value / 1024)));
                             }
                         }
                         catch (OperationCanceledException)
                         {
                             throw;
                         }
+                        catch (FabricNotReadableException)
+                        {
+                            // simple trace
+                        }
+                        catch (TimeoutException)
+                        {
+                            // simple trace
+                        }
                         catch (Exception ex)
                         {
-                            // trace
+                            // full stack trace
                         }
 
-                        await Task.Delay(DefaultReportInterval, cancellationToken);
+                        await Task.Delay(this.config.ReportInterval, cancellationToken);
                     }
                 },
                 cancellationToken);
@@ -386,7 +433,8 @@ namespace MetricReliableCollections
                     MetricReliableDictionaryActivator.CreateFromReliableDictionaryType(
                         type,
                         innerStore,
-                        new BinaryValueConverter(name, this.serializerResolver)));
+                        new BinaryValueConverter(name, this.serializerResolver),
+                        this.config));
             }
 
             return new ConditionalValue<IReliableState>(false, null);
@@ -401,14 +449,15 @@ namespace MetricReliableCollections
 
                 if (tryGetResult.HasValue)
                 {
-                    await this.UpdateMetricCollectionTypesAsync(tx, type, name, DefaultTimeout);
+                    await this.UpdateMetricCollectionTypesAsync(tx, type, name, this.config.DefaultOperationTimeout);
 
                     ConditionalValue<IReliableState> result = new ConditionalValue<IReliableState>(
                         true,
                         MetricReliableDictionaryActivator.CreateFromReliableDictionaryType(
                             type,
                             tryGetResult.Value,
-                            new BinaryValueConverter(name, this.serializerResolver)));
+                            new BinaryValueConverter(name, this.serializerResolver),
+                            this.config));
 
                     return result;
                 }
@@ -430,6 +479,23 @@ namespace MetricReliableCollections
             return this.collectionTypeNamesInstance;
         }
 
+        private void StateManagerReplica_TransactionChanged(object sender, NotifyTransactionChangedEventArgs e)
+        {
+            EventHandler<NotifyTransactionChangedEventArgs> handler = this.TransactionChanged;
+            if (handler != null)
+            {
+                handler(sender, e);
+            }
+        }
+
+        private void StateManagerReplica_StateManagerChanged(object sender, NotifyStateManagerChangedEventArgs e)
+        {
+            EventHandler<NotifyStateManagerChangedEventArgs> handler = this.StateManagerChanged;
+            if (handler != null)
+            {
+                handler(sender, e);
+            }
+        }
 
         /// <summary>
         /// Async enumerator wrapper.
@@ -439,7 +505,6 @@ namespace MetricReliableCollections
             private readonly MetricReliableStateManager metricReliableStateManager;
 
             private readonly IAsyncEnumerator<IReliableState> stateManagerReplicaEnumerator;
-
 
             public MetricReliableStateManagerAsyncEnumerator(MetricReliableStateManager stateManager)
             {
@@ -489,7 +554,12 @@ namespace MetricReliableCollections
                             Type type = Type.GetType(typeNameResult.Value);
 
                             ConditionalValue<IReliableState> result =
-                                await this.metricReliableStateManager.TryCreateOrGetMetricReliableCollectionAsync(tx, type, name, DefaultTimeout);
+                                await
+                                    this.metricReliableStateManager.TryCreateOrGetMetricReliableCollectionAsync(
+                                        tx,
+                                        type,
+                                        name,
+                                        this.metricReliableStateManager.config.DefaultOperationTimeout);
 
                             if (result.HasValue)
                             {

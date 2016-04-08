@@ -26,6 +26,7 @@ namespace MetricReliableCollections.Tests
             MetricReliableStateManager target = new MetricReliableStateManager(
                 this.GetContext(),
                 new JsonReliableStateSerializerResolver(),
+                this.GetConfig(),
                 new MockReliableStateManager());
 
             IReliableDictionary<int, string> actual = await target.GetOrAddAsync<IReliableDictionary<int, string>>("test://dictionary");
@@ -39,6 +40,7 @@ namespace MetricReliableCollections.Tests
             MetricReliableStateManager target = new MetricReliableStateManager(
                 this.GetContext(),
                 new JsonReliableStateSerializerResolver(),
+                this.GetConfig(),
                 new MockReliableStateManager());
 
             IReliableDictionary<int, string> dictionary = await target.GetOrAddAsync<IReliableDictionary<int, string>>("test://dictionary");
@@ -65,6 +67,7 @@ namespace MetricReliableCollections.Tests
             MetricReliableStateManager target = new MetricReliableStateManager(
                 this.GetContext(),
                 new JsonReliableStateSerializerResolver(),
+                this.GetConfig(),
                 new MockReliableStateManager());
 
             ConditionalValue<IReliableDictionary<int, string>> actual = await target.TryGetAsync<IReliableDictionary<int, string>>("test://dictionary");
@@ -80,6 +83,7 @@ namespace MetricReliableCollections.Tests
             MetricReliableStateManager target = new MetricReliableStateManager(
                 this.GetContext(),
                 new JsonReliableStateSerializerResolver(),
+                this.GetConfig(),
                 new MockReliableStateManager());
 
             await target.GetOrAddAsync<IReliableDictionary<int, string>>(name);
@@ -96,6 +100,7 @@ namespace MetricReliableCollections.Tests
             MetricReliableStateManager target = new MetricReliableStateManager(
                 this.GetContext(),
                 new JsonReliableStateSerializerResolver(),
+                this.GetConfig(),
                 new MockReliableStateManager());
 
             IAsyncEnumerator<IReliableState> enumerator = target.GetAsyncEnumerator();
@@ -113,6 +118,7 @@ namespace MetricReliableCollections.Tests
             MetricReliableStateManager target = new MetricReliableStateManager(
                 this.GetContext(),
                 new JsonReliableStateSerializerResolver(),
+                this.GetConfig(),
                 new MockReliableStateManager());
 
             await target.GetOrAddAsync<IReliableDictionary<int, string>>(name);
@@ -137,6 +143,7 @@ namespace MetricReliableCollections.Tests
             MetricReliableStateManager target = new MetricReliableStateManager(
                 this.GetContext(),
                 new JsonReliableStateSerializerResolver(),
+                this.GetConfig(),
                 new MockReliableStateManager());
 
             await target.GetOrAddAsync<IReliableDictionary<int, string>>(dictionaryName);
@@ -160,6 +167,17 @@ namespace MetricReliableCollections.Tests
                 null,
                 Guid.NewGuid(),
                 0);
+        }
+
+        private MetricConfiguration GetConfig()
+        {
+            return new MetricConfiguration(
+                "MemoryKB",
+                DataSizeUnits.Kilobytes,
+                "DiskKB",
+                DataSizeUnits.Kilobytes,
+                TimeSpan.FromSeconds(30),
+                TimeSpan.FromSeconds(4));
         }
     }
 }

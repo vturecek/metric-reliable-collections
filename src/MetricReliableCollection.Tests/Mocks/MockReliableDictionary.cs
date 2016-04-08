@@ -25,6 +25,13 @@ namespace MetricReliableCollections.Tests.Mocks
             this.Name = name;
         }
 
+        public Func<IEnumerable<LoadMetric>> OnGetLoadMetrics { get; set; }
+
+        public Task<IEnumerable<LoadMetric>> GetLoadMetricsAsync(ITransaction tx, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(this.OnGetLoadMetrics());
+        }
+
         public event EventHandler<NotifyDictionaryChangedEventArgs<TKey, TValue>> DictionaryChanged;
 
         public Uri Name { get; }
@@ -243,13 +250,6 @@ namespace MetricReliableCollections.Tests.Mocks
         public Task<long> GetCountAsync()
         {
             return Task.FromResult((long) this.dictionary.Count);
-        }
-
-        public Func<IEnumerable<LoadMetric>> OnGetLoadMetrics { get; set; }
-
-        public Task<IEnumerable<LoadMetric>> GetLoadMetricsAsync(ITransaction tx, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(this.OnGetLoadMetrics());
         }
     }
 }

@@ -10,6 +10,7 @@ namespace MetricReliableCollections.Tests
     using System.Threading.Tasks;
     using MetricReliableCollections.ReliableStateSerializers;
     using MetricReliableCollections.Tests.Mocks;
+    using Microsoft.ServiceFabric.Data;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
@@ -36,6 +37,7 @@ namespace MetricReliableCollections.Tests
             MetricReliableStateManager target = new MetricReliableStateManager(
                 this.GetContext(),
                 new JsonReliableStateSerializerResolver(),
+                this.GetConfig(),
                 new MockReliableStateManager());
 
             ManualResetEvent reset = new ManualResetEvent(false);
@@ -51,8 +53,8 @@ namespace MetricReliableCollections.Tests
                 }
             };
 
-            await target.OpenAsync(ReplicaOpenMode.New, partition, CancellationToken.None);
-            await target.ChangeRoleAsync(role, CancellationToken.None);
+            await ((IStateProviderReplica) target).OpenAsync(ReplicaOpenMode.New, partition, CancellationToken.None);
+            await ((IStateProviderReplica) target).ChangeRoleAsync(role, CancellationToken.None);
 
             // this may yield false negatives because we're at the mercy of the task scheduler
             // to actually execute the reporting task in a timely manner, which depends on external factors.
@@ -72,6 +74,17 @@ namespace MetricReliableCollections.Tests
                 null,
                 Guid.NewGuid(),
                 0);
+        }
+
+        private MetricConfiguration GetConfig()
+        {
+            return new MetricConfiguration(
+                "MemoryKB",
+                DataSizeUnits.Kilobytes,
+                "DiskKB",
+                DataSizeUnits.Kilobytes,
+                TimeSpan.FromSeconds(30),
+                TimeSpan.FromSeconds(4));
         }
     }
 }

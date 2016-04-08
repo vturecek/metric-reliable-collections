@@ -4,14 +4,14 @@
 
 namespace MetricReliableCollections.Tests
 {
-    using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using Mocks;
     using System;
     using System.Collections.Generic;
     using System.Fabric;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using MetricReliableCollections.Tests.Mocks;
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
     public class MetricAggregatorTests
@@ -67,7 +67,7 @@ namespace MetricReliableCollections.Tests
 
             MetricAggregator target = new MetricAggregator();
             IEnumerable<LoadMetric> actual = await target.Aggregate(stateManager, CancellationToken.None);
-            
+
             Assert.AreEqual<int>(1, actual.Count(x => x.Name == expectedMetric1 && x.Value == expectedMetric1Value));
             Assert.AreEqual<int>(1, actual.Count(x => x.Name == expectedMetric2 && x.Value == expectedMetric2Value));
         }
@@ -91,15 +91,15 @@ namespace MetricReliableCollections.Tests
             dictionary1.OnGetLoadMetrics = () =>
                 new LoadMetric[]
                 {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value / 2),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value / 2)
+                    new LoadMetric(expectedMetric1, expectedMetric1Value/2),
+                    new LoadMetric(expectedMetric2, expectedMetric2Value/2)
                 };
 
             dictionary2.OnGetLoadMetrics = () =>
                 new LoadMetric[]
                 {
-                    new LoadMetric(expectedMetric1, expectedMetric1Value / 2),
-                    new LoadMetric(expectedMetric2, expectedMetric2Value / 2)
+                    new LoadMetric(expectedMetric1, expectedMetric1Value/2),
+                    new LoadMetric(expectedMetric2, expectedMetric2Value/2)
                 };
 
             stateManager.SetMock(collection1Name, dictionary1);
@@ -137,7 +137,7 @@ namespace MetricReliableCollections.Tests
                     new LoadMetric(expectedMetric1, expectedMetric1Value),
                     new LoadMetric(expectedMetric2, expectedMetric2Value)
                 };
-            
+
 
             dictionary2.OnGetLoadMetrics = () =>
                 new LoadMetric[]

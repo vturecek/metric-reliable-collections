@@ -21,7 +21,6 @@ namespace LoadGenService
             try
             {
                 //To use regular Reliable Collection, use this registration instead:
-
                 //ServiceRuntime.RegisterServiceAsync(
                 //    "LoadGenServiceType",
                 //    context => new LoadGenService(context, new ReliableStateManager(context)))
@@ -30,7 +29,12 @@ namespace LoadGenService
 
                 ServiceRuntime.RegisterServiceAsync(
                     "LoadGenServiceType",
-                    context => new LoadGenService(context, new MetricReliableStateManager(context, new JsonReliableStateSerializerResolver())))
+                    context => new LoadGenService(
+                        context,
+                        new MetricReliableStateManager(
+                            context,
+                            new JsonReliableStateSerializerResolver(),
+                            new MetricConfiguration("MemoryKB", DataSizeUnits.Kilobytes, "DiskKB", DataSizeUnits.Kilobytes, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5)))))
                     .GetAwaiter()
                     .GetResult();
 
