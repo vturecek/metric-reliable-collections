@@ -33,8 +33,8 @@ namespace LoadGenService
                         context,
                         new MetricReliableStateManager(
                             context,
-                            new JsonReliableStateSerializerResolver(),
-                            new MetricConfiguration("MemoryKB", DataSizeUnits.Kilobytes, "DiskKB", DataSizeUnits.Kilobytes, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5)))))
+                            new CustomSerializerResolver(),
+                            new MetricConfiguration("MemoryKB", DataSizeUnits.Kilobytes, "DiskKB", DataSizeUnits.Kilobytes, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(5)))))
                     .GetAwaiter()
                     .GetResult();
 
