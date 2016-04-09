@@ -15,23 +15,23 @@ namespace MetricReliableCollections.Tests
         [TestMethod]
         public void CreateEmptyBuffer()
         {
-            BinaryValue target = new BinaryValue(new ArraySegment<byte>(new byte[0]));
+            BinaryValue target = new BinaryValue(new byte[0]);
 
             Assert.AreEqual<int>(0, target.Buffer.Length);
         }
 
         [TestMethod]
-        public void CreateEmptyArraySegment()
+        public void CreateEmptyBufferNoCopy()
         {
-            BinaryValue target = new BinaryValue(new ArraySegment<byte>());
+            BinaryValue target = new BinaryValue(new byte[0], false);
 
             Assert.AreEqual<int>(0, target.Buffer.Length);
         }
-
+        
         [TestMethod]
         public void EmptyBufferHashcode()
         {
-            BinaryValue target = new BinaryValue(new ArraySegment<byte>());
+            BinaryValue target = new BinaryValue(new byte[0]);
 
             Assert.AreEqual<int>(0, target.GetHashCode());
         }
@@ -39,14 +39,11 @@ namespace MetricReliableCollections.Tests
         [TestMethod]
         public void TestComparable()
         {
-            BinaryValue less = new BinaryValue(
-                new ArraySegment<byte>(BitConverter.GetBytes(1)));
+            BinaryValue less = new BinaryValue(BitConverter.GetBytes(1));
 
-            BinaryValue same = new BinaryValue(
-                new ArraySegment<byte>(BitConverter.GetBytes(1)));
+            BinaryValue same = new BinaryValue(BitConverter.GetBytes(1));
 
-            BinaryValue greater = new BinaryValue(
-                new ArraySegment<byte>(BitConverter.GetBytes(2)));
+            BinaryValue greater = new BinaryValue(BitConverter.GetBytes(2));
 
             Assert.AreEqual<int>(less.GetHashCode(), same.GetHashCode());
             Assert.AreEqual<int>(-1, less.CompareTo(greater));
@@ -61,8 +58,7 @@ namespace MetricReliableCollections.Tests
 
             BinaryValue defaultValueSame = default(BinaryValue);
 
-            BinaryValue greater = new BinaryValue(
-                new ArraySegment<byte>(BitConverter.GetBytes(2)));
+            BinaryValue greater = new BinaryValue(BitConverter.GetBytes(2));
 
             Assert.AreEqual<int>(defaultValue.GetHashCode(), defaultValueSame.GetHashCode());
             Assert.AreEqual<int>(-1, defaultValue.CompareTo(greater));
@@ -73,14 +69,11 @@ namespace MetricReliableCollections.Tests
         [TestMethod]
         public void TestEquatable()
         {
-            BinaryValue less = new BinaryValue(
-                new ArraySegment<byte>(BitConverter.GetBytes(1)));
+            BinaryValue less = new BinaryValue(BitConverter.GetBytes(1));
 
-            BinaryValue same = new BinaryValue(
-                new ArraySegment<byte>(BitConverter.GetBytes(1)));
+            BinaryValue same = new BinaryValue(BitConverter.GetBytes(1));
 
-            BinaryValue greater = new BinaryValue(
-                new ArraySegment<byte>(BitConverter.GetBytes(2)));
+            BinaryValue greater = new BinaryValue(BitConverter.GetBytes(2));
 
             Assert.AreEqual<int>(less.GetHashCode(), same.GetHashCode());
 
@@ -100,8 +93,7 @@ namespace MetricReliableCollections.Tests
 
             BinaryValue defaultValueSame = default(BinaryValue);
 
-            BinaryValue greater = new BinaryValue(
-                new ArraySegment<byte>(BitConverter.GetBytes(2)));
+            BinaryValue greater = new BinaryValue(BitConverter.GetBytes(2));
 
             Assert.AreEqual<int>(defaultValue.GetHashCode(), defaultValueSame.GetHashCode());
 
@@ -121,14 +113,11 @@ namespace MetricReliableCollections.Tests
 
             foreach (string test in testStrings)
             {
-                BinaryValue target = new BinaryValue(
-                    new ArraySegment<byte>(Encoding.UTF8.GetBytes(test)));
+                BinaryValue target = new BinaryValue(Encoding.UTF8.GetBytes(test));
 
-                BinaryValue same = new BinaryValue(
-                    new ArraySegment<byte>(Encoding.UTF8.GetBytes(test)));
+                BinaryValue same = new BinaryValue(Encoding.UTF8.GetBytes(test));
 
-                BinaryValue different = new BinaryValue(
-                    new ArraySegment<byte>(Encoding.UTF8.GetBytes(test + "different")));
+                BinaryValue different = new BinaryValue(Encoding.UTF8.GetBytes(test + "different"));
 
                 Assert.AreEqual<int>(target.GetHashCode(), same.GetHashCode());
                 Assert.IsTrue(target.Equals(same));
@@ -147,8 +136,7 @@ namespace MetricReliableCollections.Tests
 
             for (int i = 0; i < Int32.MaxValue && i > 0; i += Int32.MaxValue/100)
             {
-                BinaryValue target = new BinaryValue(
-                    new ArraySegment<byte>(BitConverter.GetBytes(i)));
+                BinaryValue target = new BinaryValue(BitConverter.GetBytes(i));
 
                 dictionary[target] = i;
             }

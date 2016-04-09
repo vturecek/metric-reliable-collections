@@ -6,17 +6,39 @@ namespace MetricReliableCollections
 {
     using System;
 
+    /// <summary>
+    /// Wrapper struct around arbitrary binary data.
+    /// </summary>
     internal struct BinaryValue : IComparable<BinaryValue>, IEquatable<BinaryValue>
     {
+        /// <summary>
+        /// Direct access to the buffer that holds the actual data. Be careful.
+        /// </summary>
         internal byte[] Buffer { get; }
 
-        public BinaryValue(ArraySegment<byte> buffer)
+        /// <summary>
+        /// Creates a new BinaryValue.
+        /// </summary>
+        /// <param name="buffer"></param>
+        /// <param name="copyBuffer">
+        /// Set to false if the given buffer does not owned by any other entity, such as a stream.
+        /// When set to false, the buffer reference will be saved but the buffer contents will not be copied.
+        /// Default is true.
+        /// </param>
+        public BinaryValue(byte[] buffer, bool copyBuffer = true)
         {
-            if (buffer.Count > 0)
+            if (buffer.Length > 0)
             {
-                this.Buffer = new byte[buffer.Count];
-
-                Array.Copy(buffer.Array, buffer.Offset, this.Buffer, 0, buffer.Count);
+                if (copyBuffer)
+                {
+                    this.Buffer = new byte[buffer.Length];
+                    
+                    Array.Copy(buffer, 0, this.Buffer, 0, buffer.Length);
+                }
+                else
+                {
+                    this.Buffer = buffer;
+                }
             }
             else
             {

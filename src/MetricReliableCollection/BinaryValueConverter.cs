@@ -25,7 +25,7 @@ namespace MetricReliableCollections
             using (MemoryStream stream = new MemoryStream())
             {
                 serializer.Serialize(stream, value);
-                return new BinaryValue(new ArraySegment<byte>(stream.ToArray()));
+                return new BinaryValue(stream.ToArray(), false);
             }
         }
 
