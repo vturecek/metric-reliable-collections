@@ -393,37 +393,28 @@ namespace MetricReliableCollections
                 },
                 cancellationToken);
         }
-
+        
         /// <summary>
-        /// Stores the given type information for the collection with the given name.
-        /// The type information is used to recreate the collection during enumeration.
+        /// Inner GetOrAdd for a collection.
+        /// This method adds new metric collection type information for new collections as part of the same transaction.
         /// </summary>
         /// <param name="tx"></param>
         /// <param name="type"></param>
         /// <param name="name"></param>
         /// <param name="timeout"></param>
         /// <returns></returns>
-        private async Task UpdateMetricCollectionTypesAsync(ITransaction tx, Type type, Uri name, TimeSpan timeout)
-        {
-            // Getting this dictionary is not part of the given transaction (tx).
-            // Using the given transaction doesn't work because the dictionary won't be created
-            //   until the transaction used to create it is committed.
-            IReliableDictionary<string, string> metricDictionaryTypes =
-                await this.stateManagerReplica.GetOrAddAsync<IReliableDictionary<string, string>>(new Uri(MetricCollectionTypeDictionaryName), timeout);
-
-            if (!(await metricDictionaryTypes.ContainsKeyAsync(tx, name.ToString(), LockMode.Update)))
-            {
-                await metricDictionaryTypes.AddAsync(tx, name.ToString(), type.AssemblyQualifiedName);
-
-                // the caller must commit the transaction, or else bad things will happen.
-            }
-        }
-
         private async Task<ConditionalValue<IReliableState>> TryCreateOrGetMetricReliableCollectionAsync(ITransaction tx, Type type, Uri name, TimeSpan timeout)
         {
             if (type.GetGenericTypeDefinition() == typeof(IReliableDictionary<,>))
             {
-                await this.UpdateMetricCollectionTypesAsync(tx, type, name, timeout);
+                // Store the given type information for the collection with the given name.
+                // The type information is used to recreate the collection during enumeration.
+                IReliableDictionary <string, string> metricDictionaryTypes = await this.GetTypeNameDictionaryAsync();
+
+                if (!(await metricDictionaryTypes.ContainsKeyAsync(tx, name.ToString(), LockMode.Update)))
+                {
+                    await metricDictionaryTypes.AddAsync(tx, name.ToString(), type.AssemblyQualifiedName);
+                }
 
                 IReliableDictionary<BinaryValue, BinaryValue> innerStore =
                     await this.stateManagerReplica.GetOrAddAsync<IReliableDictionary<BinaryValue, BinaryValue>>(tx, name, timeout);
@@ -440,6 +431,14 @@ namespace MetricReliableCollections
             return new ConditionalValue<IReliableState>(false, null);
         }
 
+        /// <summary>
+        /// Inner Get for a collection.
+        /// This method only attemps to get existing collections.
+        /// </summary>
+        /// <param name="tx"></param>
+        /// <param name="type"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
         private async Task<ConditionalValue<IReliableState>> TryGetMetricReliableCollectionAsync(ITransaction tx, Type type, Uri name)
         {
             if (type.GetGenericTypeDefinition() == typeof(IReliableDictionary<,>))
@@ -449,8 +448,6 @@ namespace MetricReliableCollections
 
                 if (tryGetResult.HasValue)
                 {
-                    await this.UpdateMetricCollectionTypesAsync(tx, type, name, this.config.DefaultOperationTimeout);
-
                     ConditionalValue<IReliableState> result = new ConditionalValue<IReliableState>(
                         true,
                         MetricReliableDictionaryActivator.CreateFromReliableDictionaryType(
@@ -553,13 +550,13 @@ namespace MetricReliableCollections
                             Uri name = this.stateManagerReplicaEnumerator.Current.Name;
                             Type type = Type.GetType(typeNameResult.Value);
 
+
                             ConditionalValue<IReliableState> result =
                                 await
-                                    this.metricReliableStateManager.TryCreateOrGetMetricReliableCollectionAsync(
+                                    this.metricReliableStateManager.TryGetMetricReliableCollectionAsync(
                                         tx,
                                         type,
-                                        name,
-                                        this.metricReliableStateManager.config.DefaultOperationTimeout);
+                                        name);
 
                             if (result.HasValue)
                             {
