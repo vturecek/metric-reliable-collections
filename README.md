@@ -2,7 +2,7 @@
 Service Fabric Reliable Collections that report storage load metrics.
 
 ## Wat
-Metric Reliable Collections are wrappers around Reliable Collections that automatically report load metrics for memory and disk usage. The load reported is exactly the amount of data stored in each replica of a service that uses Metric Reliable Collections. It does not report total memory and disk used by each replica. Both primary and active secondary replicas report load.
+Metric Reliable Collections are wrappers around Reliable Collections that automatically report memory and disk usage load metrics for automated resource balancing of stateful services based on the amount of data they're storing. The load reported is exactly the amount of data stored in each replica of a service that uses Metric Reliable Collections. It does not report total memory and disk used by each replica. Both primary and active secondary replicas report load.
 
 ## Usage
  1. Simply replace your ReliableStateManager instance with a MetricReliableStateManager when you create your service class. As long as your service works only with the Reliable Collection interfaces and not the concrete classes, no other changes are required to your service code. You must provide a custom serializer. A JSON serializer is provided by default for the lazy.
