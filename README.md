@@ -2,10 +2,10 @@
 Service Fabric Reliable Collections that report storage load metrics.
 
 ## Wat
-Metric Reliable Collections are wrappers around Reliable Collections that automatically report memory and disk usage load metrics for automated resource balancing of stateful services based on the amount of data they're storing. The load reported is exactly the amount of data stored in each replica of a service that uses Metric Reliable Collections. It does not report total memory and disk used by each replica. Both primary and active secondary replicas report load.
+Metric Reliable Collections are wrappers around Reliable Collections that automatically report memory and disk usage load metrics for automated resource balancing of stateful services based on the amount of data they're storing. The load reported is exactly the amount of data stored in Reliable Collections in each replica of a service that uses Metric Reliable Collections. It does not report total memory and disk used by each replica. Both primary and active secondary replicas report load.
 
 ## Usage
- 1. Simply replace your ReliableStateManager instance with a MetricReliableStateManager when you create your service class. As long as your service works only with the Reliable Collection interfaces and not the concrete classes, no other changes are required to your service code. You must provide a custom serializer. A JSON serializer is provided by default for the lazy.
+ 1. Simply replace your ReliableStateManager instance with a MetricReliableStateManager when you create your service class. As long as your service works only with the Reliable Collection interfaces and not the concrete classes, no other changes are required to your service code. You must provide a custom serializer. A JSON serializer is included to get started - it's not the fastest or the most efficient, but it should work with just about any data type.
 
  ```csharp
     internal static class Program
@@ -77,7 +77,7 @@ Metric Reliable Collections are wrappers around Reliable Collections that automa
 ## How it works
 Services that use Reliable Collections program against the Reliable Collection interfaces. Metric Reliable Collections are implementations of those interfaces. For services that are written against the interfaces, no change to service code should be required to use Metric Reliable Collections.
 
-At the heart is MetricReliableStateManager, an implementation of IReliableStateManager. It manages MetricReliableCollections, implementations of IReliableCollections. MetricReliableStateManager is a wrapper around the built-in ReliableStateManager that creates Metric wrappers around Reliable Collections. The Reliable Collections that are created store byte arrays, and the Metric wrappers around them convert your strongly-typed objects to byte arrays. This allows the Metric classes to quickly and accurately compute usage by totalling up the number of bytes stored in the collections without walking object graphs or using serialization tricks to compute object size. This also allows MetricReliableStateManager to define a flexible custom serialization interface.
+At the heart is MetricReliableStateManager, an implementation of IReliableStateManager. It manages MetricReliableCollections, implementations of IReliableCollections. MetricReliableStateManager is a wrapper around the built-in ReliableStateManager that creates Metric wrappers around Reliable Collections. The Reliable Collections that are created store byte arrays, and the Metric wrappers use your serializer to convert your strongly-typed objects to byte arrays. The memory and disk usage that gets reported is the size of the byte arrays, which is directly affected by your serialization. This allows the Metric classes to quickly and accurately compute usage by totalling up the number of bytes stored in the collections without walking object graphs to compute object size. This also allows MetricReliableStateManager to define a flexible custom serialization interface.
 
 ## Notes
 Still a work-in-progress but ready for a test run.
